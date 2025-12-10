@@ -5,7 +5,7 @@ import streamlit as st
 # --- Initialize recipes in session_state ---
 if "recipes" not in st.session_state:
     base_df = pd.read_excel(
-        r"C:\Users\jcart\OneDrive\Documents\Cooking\Copy of cooking.xlsx",
+        "Copy of cooking.xlsx",
         sheet_name="Sheet1"
     )
     base_df["Ingredients"] = base_df["Ingredients"].apply(
