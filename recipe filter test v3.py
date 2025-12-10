@@ -5,9 +5,7 @@ import streamlit as st
 # --- Initialize recipes in session_state ---
 if "recipes" not in st.session_state:
     base_df = pd.read_excel(
-        "Copy of cooking.xlsx",
-        sheet_name="Sheet1"
-    )
+        "Copy of cooking.xlsx",sheet_name="Sheet1")
     base_df["Ingredients"] = base_df["Ingredients"].apply(
         lambda x: [i.strip().lower() for i in str(x).split(",")]
     )
