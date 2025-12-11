@@ -76,35 +76,37 @@ search_input = st.text_input("Enter ingredients (comma separated):")
 threshold = st.slider("Threshold (strictness)", 50, 100, 85)
 min_percentage = st.slider("Minimum overlap (% of search terms)", 0, 100, 50) / 100.0
 
+# --- Search trigger ---
 if st.button("Search"):
     if search_input.strip():
         search_terms = [term.strip() for term in search_input.split(",")]
-        matches = search_recipes(search_terms, threshold=threshold, min_percentage=min_percentage)
+        st.session_state.matches = search_recipes(
+            search_terms, threshold=threshold, min_percentage=min_percentage
+        )
+    else:
+        st.error("Please enter at least one ingredient.")
 
-        if not matches:
-            st.warning("No recipes found.")
-        else:
-            for match in matches:
-                recipe_row = recipes[recipes["Recipe Name"] == match["Recipe"]].iloc[0]
-                servings = recipe_row.get("Servings", "N/A")
+# --- Results display ---
+if "matches" in st.session_state and st.session_state.matches:
+    for match in st.session_state.matches:
+        recipe_row = recipes[recipes["Recipe Name"] == match["Recipe"]].iloc[0]
+        servings = recipe_row.get("Servings", "N/A")
 
-                st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
-                st.write(f"Servings: {servings}")
-                st.write(f"Matched {match['Match Count']} terms")
+        st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
+        st.write(f"Servings: {servings}")
+        st.write(f"Matched {match['Match Count']} terms")
 
-                for ing, score in match["Matched Ingredients"]:
-                    st.write(f"- {ing} (similarity score: {score})")
+        for ing, score in match["Matched Ingredients"]:
+            st.write(f"- {ing} (similarity score: {score})")
 
-                # ✅ Correct button to add ingredients
-                if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
-                    st.session_state.shopping_list.extend(recipe_row["Ingredients"])
-                    st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
+        # ✅ Correct button with unique key
+        if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
+            st.session_state.shopping_list.extend(list(recipe_row["Ingredients"]))
+            st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
-                # Optional: expander to show all ingredients
-                with st.expander("Show all ingredients"):
-                    st.write("All ingredients:")
-                    for ing in recipe_row["Ingredients"]:
-                        st.write(f"- {ing}")
+        with st.expander("Show all ingredients"):
+            for ing in recipe_row["Ingredients"]:
+                st.write(f"- {ing}")
     else:
         st.error("Please enter at least one ingredient.")
 
