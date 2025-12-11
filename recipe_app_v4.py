@@ -15,7 +15,6 @@ if "recipes" not in st.session_state:
 if "shopping_list" not in st.session_state:
     st.session_state.shopping_list = []
 
-# Always work with the session_state version
 recipes = st.session_state.recipes
 
 # --- Manual recipe entry form ---
@@ -76,19 +75,17 @@ search_input = st.text_input("Enter ingredients (comma separated):")
 threshold = st.slider("Threshold (strictness)", 50, 100, 85)
 min_percentage = st.slider("Minimum overlap (% of search terms)", 0, 100, 50) / 100.0
 
-# --- Search trigger ---
+# --- Step 1: Search trigger ---
 if st.button("Search"):
-    if search_input.strip():   # ✅ only runs if there is text
+    if search_input.strip():
         search_terms = [term.strip() for term in search_input.split(",")]
         st.session_state.matches = search_recipes(
             search_terms, threshold=threshold, min_percentage=min_percentage
         )
     else:
-        # ❌ only runs if you clicked Search with an empty field
-        st.error("Please enter at least one ingredient.")
+        st.error("Please enter at least one ingredient.")  # ✅ only shows if Search clicked with empty field
 
-
-# --- Results display ---
+# --- Step 2: Results display ---
 if "matches" in st.session_state and st.session_state.matches:
     for match in st.session_state.matches:
         recipe_row = recipes[recipes["Recipe Name"] == match["Recipe"]].iloc[0]
@@ -101,23 +98,19 @@ if "matches" in st.session_state and st.session_state.matches:
         for ing, score in match["Matched Ingredients"]:
             st.write(f"- {ing} (similarity score: {score})")
 
-        # ✅ Correct button with unique key
+        # ✅ Add to shopping list button
         if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
-            st.session_state.shopping_list.extend(list(recipe_row["Ingredients"]))
+            st.session_state.shopping_list.extend(recipe_row["Ingredients"])
             st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
         with st.expander("Show all ingredients"):
             for ing in recipe_row["Ingredients"]:
                 st.write(f"- {ing}")
-    else:
-        st.error("Please enter at least one ingredient.")
 
-# --- Shopping list display ---
+# --- Step 3: Shopping list display ---
 st.header("🛒 Shopping List")
-if "shopping_list" not in st.session_state:
-    st.session_state.shopping_list = []
 
-# ✅ Clear/Reset button
+# Clear/reset button
 if st.button("Clear shopping list"):
     st.session_state.shopping_list = []
     st.success("Shopping list cleared!")
