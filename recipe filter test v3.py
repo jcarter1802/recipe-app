@@ -112,6 +112,16 @@ if st.button("Search"):
                     st.write("All ingredients:")
                     for ing in recipe_row["Ingredients"]:
                         st.write(f"- {ing}")
-
     else:
         st.error("Please enter at least one ingredient.")
+
+# --- Shopping list display ---
+st.header("🛒 Shopping List")
+if "shopping_list" not in st.session_state:
+    st.session_state.shopping_list = []  # initialize if missing
+
+if st.session_state.shopping_list:
+    for item in st.session_state.shopping_list:
+        st.write(f"- {item}")
+else:
+    st.write("Your shopping list is empty.")
