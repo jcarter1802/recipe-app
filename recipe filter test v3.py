@@ -13,6 +13,9 @@ if "recipes" not in st.session_state:
         base_df["Servings"] = None
     st.session_state.recipes = base_df.copy()
 
+    if "shopping_list" not in st.session_state:
+        st.session_state.shopping_list = []
+
 # Always work with the session_state version
 recipes = st.session_state.recipes
 
@@ -98,10 +101,21 @@ if st.button("Search"):
                 for ing, score in match["Matched Ingredients"]:
                     st.write(f"- {ing} (similarity score: {score})")
 
+                if st.button(f"Add {match['Recipe']} to shopping list"):
+                    st.session_state.shopping_list.extend(recipe_row["Ingredients"])
+                    st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
+
                 with st.expander("Show all ingredients"):
                     st.write("All ingredients:")
                     for ing in recipe_row["Ingredients"]:
                         st.write(f"- {ing}")
+
+                st.header("🛒 Shopping List")
+                if st.session_state.shopping_list:
+                    for item in st.session_state.shopping_list:
+                        st.write(f"- {item}")
+                else:
+                    st.write("Your shopping list is empty.")
 
     else:
         st.error("Please enter at least one ingredient.")
