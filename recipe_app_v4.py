@@ -87,6 +87,7 @@ if st.button("Search"):
         # ❌ only runs if you clicked Search with an empty field
         st.error("Please enter at least one ingredient.")
 
+
 # --- Results display ---
 if "matches" in st.session_state and st.session_state.matches:
     for match in st.session_state.matches:
