@@ -9,6 +9,8 @@ if "recipes" not in st.session_state:
     base_df["Ingredients"] = base_df["Ingredients"].apply(
         lambda x: [i.strip().lower() for i in str(x).split(",")]
     )
+    if "Servings" not in base_df.columns:
+        base_df["Servings"] = None
     st.session_state.recipes = base_df.copy()
 
 # Always work with the session_state version
@@ -18,13 +20,17 @@ recipes = st.session_state.recipes
 with st.form("add_recipe"):
     recipe_name = st.text_input("Recipe Name")
     ingredients = st.text_area("Ingredients (comma-separated)")
+    servings = st.number_input("Number of servings", min_value=1, step=1)
     submitted = st.form_submit_button("Add Recipe")
 
 if submitted and recipe_name.strip() and ingredients.strip():
     new_recipe = pd.DataFrame([{
         "Recipe Name": recipe_name.strip(),
-        "Ingredients": [i.strip().lower() for i in ingredients.split(",")]
+        "Ingredients": [i.strip().lower() for i in ingredients.split(",")],
+        "Servings": servings
     }])
+    st.session_state.recipes = pd.concat([st.session_state.recipes, new_recipe], ignore_index=True)
+    st.success(f"Added recipe: {recipe_name} ({servings} servings)")
     # Update session state
     st.session_state.recipes = pd.concat([st.session_state.recipes, new_recipe], ignore_index=True)
 
@@ -83,7 +89,11 @@ if st.button("Search"):
             st.warning("No recipes found.")
         else:
             for match in matches:
+                recipe_row = recipes[recipes["Recipe Name"] == match["Recipe"]].iloc[0]
+                servings = recipe_row.get("Servings", "N/A")
+
                 st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
+                st.write(f"Servings: {servings}")
                 st.write(f"Matched {match['Match Count']} terms")
                 for ing, score in match["Matched Ingredients"]:
                     st.write(f"- {ing} (similarity score: {score})")
