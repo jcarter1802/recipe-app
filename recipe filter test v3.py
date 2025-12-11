@@ -83,13 +83,6 @@ search_input = st.text_input("Enter ingredients (comma separated):")
 threshold = st.slider("Threshold (strictness)", 50, 100, 85)
 min_percentage = st.slider("Minimum overlap (% of search terms)", 0, 100, 50) / 100.0
 
-st.header("🛒 Shopping List")
-if st.session_state.shopping_list:
-    for item in st.session_state.shopping_list:
-        st.write(f"- {item}")
-else:
-    st.write("Your shopping list is empty.")
-
 if st.button("Search"):
     if search_input.strip():
         search_terms = [term.strip() for term in search_input.split(",")]
@@ -108,6 +101,22 @@ if st.button("Search"):
                 for ing, score in match["Matched Ingredients"]:
                     st.write(f"- {ing} (similarity score: {score})")
 
+                for match in matches:
+                    recipe_row = recipes[recipes["Recipe Name"] == match["Recipe"]].iloc[0]
+                    servings = recipe_row.get("Servings", "N/A")
+
+                    st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
+                    st.write(f"Servings: {servings}")
+                    st.write(f"Matched {match['Match Count']} terms")
+
+                    for ing, score in match["Matched Ingredients"]:
+                        st.write(f"- {ing} (similarity score: {score})")
+
+                    # 🔑 Step 2: add a unique key to the button
+                    if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
+                        st.session_state.shopping_list.extend(recipe_row["Ingredients"])
+                        st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
+
                 if st.button(f"Add {match['Recipe']} to shopping list"):
                     st.session_state.shopping_list.extend(recipe_row["Ingredients"])
                     st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
@@ -116,8 +125,6 @@ if st.button("Search"):
                     st.write("All ingredients:")
                     for ing in recipe_row["Ingredients"]:
                         st.write(f"- {ing}")
-
-
 
     else:
         st.error("Please enter at least one ingredient.")
