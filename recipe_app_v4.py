@@ -84,6 +84,7 @@ if st.button("Search"):
             search_terms, threshold=threshold, min_percentage=min_percentage
         )
     else:
+        # Only show error when Search is clicked with empty input
         st.error("Please enter at least one ingredient.")
 
 # --- Results display ---
