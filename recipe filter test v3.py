@@ -107,6 +107,8 @@ if st.button("Search"):
                     st.session_state.shopping_list.extend(recipe_row["Ingredients"])
                     st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
+                    st.write("Current shopping list:", st.session_state.shopping_list)
+
                 # Optional: expander to show all ingredients
                 with st.expander("Show all ingredients"):
                     st.write("All ingredients:")
