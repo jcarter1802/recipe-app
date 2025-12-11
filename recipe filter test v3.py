@@ -98,29 +98,16 @@ if st.button("Search"):
                 st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
                 st.write(f"Servings: {servings}")
                 st.write(f"Matched {match['Match Count']} terms")
+
                 for ing, score in match["Matched Ingredients"]:
                     st.write(f"- {ing} (similarity score: {score})")
 
-                for match in matches:
-                    recipe_row = recipes[recipes["Recipe Name"] == match["Recipe"]].iloc[0]
-                    servings = recipe_row.get("Servings", "N/A")
-
-                    st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
-                    st.write(f"Servings: {servings}")
-                    st.write(f"Matched {match['Match Count']} terms")
-
-                    for ing, score in match["Matched Ingredients"]:
-                        st.write(f"- {ing} (similarity score: {score})")
-
-                    # 🔑 Step 2: add a unique key to the button
-                    if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
-                        st.session_state.shopping_list.extend(recipe_row["Ingredients"])
-                        st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
-
-                if st.button(f"Add {match['Recipe']} to shopping list"):
+                # 🔑 Single button with unique key
+                if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
                     st.session_state.shopping_list.extend(recipe_row["Ingredients"])
                     st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
+                # Optional: expander to show all ingredients
                 with st.expander("Show all ingredients"):
                     st.write("All ingredients:")
                     for ing in recipe_row["Ingredients"]:
