@@ -83,6 +83,13 @@ search_input = st.text_input("Enter ingredients (comma separated):")
 threshold = st.slider("Threshold (strictness)", 50, 100, 85)
 min_percentage = st.slider("Minimum overlap (% of search terms)", 0, 100, 50) / 100.0
 
+st.header("🛒 Shopping List")
+if st.session_state.shopping_list:
+    for item in st.session_state.shopping_list:
+        st.write(f"- {item}")
+else:
+    st.write("Your shopping list is empty.")
+
 if st.button("Search"):
     if search_input.strip():
         search_terms = [term.strip() for term in search_input.split(",")]
@@ -110,12 +117,7 @@ if st.button("Search"):
                     for ing in recipe_row["Ingredients"]:
                         st.write(f"- {ing}")
 
-                st.header("🛒 Shopping List")
-                if st.session_state.shopping_list:
-                    for item in st.session_state.shopping_list:
-                        st.write(f"- {item}")
-                else:
-                    st.write("Your shopping list is empty.")
+
 
     else:
         st.error("Please enter at least one ingredient.")
