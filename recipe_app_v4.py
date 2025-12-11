@@ -112,6 +112,14 @@ if "matches" in st.session_state and st.session_state.matches:
 
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
+if "shopping_list" not in st.session_state:
+    st.session_state.shopping_list = []
+
+# ✅ Clear/Reset button
+if st.button("Clear shopping list"):
+    st.session_state.shopping_list = []
+    st.success("Shopping list cleared!")
+
 if st.session_state.shopping_list:
     for item in st.session_state.shopping_list:
         st.write(f"- {item}")
