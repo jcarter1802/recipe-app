@@ -78,13 +78,13 @@ min_percentage = st.slider("Minimum overlap (% of search terms)", 0, 100, 50) / 
 
 # --- Search trigger ---
 if st.button("Search"):
-    if search_input.strip():
+    if search_input.strip():   # ✅ only runs if there is text
         search_terms = [term.strip() for term in search_input.split(",")]
         st.session_state.matches = search_recipes(
             search_terms, threshold=threshold, min_percentage=min_percentage
         )
     else:
-        # Only show error when Search is clicked with empty input
+        # ❌ only runs if you clicked Search with an empty field
         st.error("Please enter at least one ingredient.")
 
 # --- Results display ---
