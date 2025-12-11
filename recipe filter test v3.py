@@ -97,5 +97,11 @@ if st.button("Search"):
                 st.write(f"Matched {match['Match Count']} terms")
                 for ing, score in match["Matched Ingredients"]:
                     st.write(f"- {ing} (similarity score: {score})")
+
+                with st.expander("Show all ingredients"):
+                    st.write("All ingredients:")
+                    for ing in recipe_row["Ingredients"]:
+                        st.write(f"- {ing}")
+
     else:
         st.error("Please enter at least one ingredient.")
