@@ -284,7 +284,7 @@ def format_amount(amount, unit):
     return f"{amount}{unit}" if unit else str(amount)
 # --- Initialize recipes and shopping list in session_state ---
 if "recipes" not in st.session_state:
-    base_df = pd.read_excel("C:\Users\jcart\OneDrive\Desktop\the plan\Copy of cooking.xlsx", sheet_name="Sheet1")
+    base_df = pd.read_excel("Copy of cooking.xlsx", sheet_name="Sheet1")
     base_df["Ingredients"] = base_df["Ingredients"].apply(
         lambda x: [i.strip().lower() for i in str(x).split(",")]
     )
