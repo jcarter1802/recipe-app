@@ -1,0 +1,7 @@
+- Unit normalisation so “g”, “gram”, “grams” all merge cleanly
+- Fraction support for things like “½ cup” or “1/4 tsp”
+- Plural handling (“clove” vs “cloves”, “tomato” vs “tomatoes”)
+- Category grouping (produce, dairy, spices) to make the list even more shopper‑friendly
+- Export to clipboard so you can paste the list into your phone notes
+- Recipe scaling (double a recipe, halve it, etc.)
+But for now, enjoy the win — you’ve got a tidy, intellige
