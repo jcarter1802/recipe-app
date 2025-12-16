@@ -97,49 +97,42 @@ def singularize(item):
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
 
-    # ✅ Fraction ranges like "1/2–3/4 cup sugar"
-    range_match = re.match(
-        r"^\s*([\d\s\/\.\u00BC-\u00BE\u2150-\u215E]+)\s*[-–]\s*([\d\s\/\.\u00BC-\u00BE\u2150-\u215E]+)\s*([a-zA-Z]+)\s+(.*)$",
+    # Remove zero‑width and non‑breaking spaces
+    ingredient = ingredient.replace("\u200b", "").replace("\u2009", "").replace("\u202f", "").replace("\xa0", "")
+
+    # ✅ Step 1: extract the amount (unicode fraction, mixed number, decimal, or normal fraction)
+    amount_match = re.match(
+        r"^([\d]+(?:\s+[\u00BC-\u00BE\u2150-\u215E])?|[\u00BC-\u00BE\u2150-\u215E]|[\d]+\s+[\d\/]+|[\d\/]+|[\d\.]+)",
         ingredient
     )
-    if range_match:
-        low_text = range_match.group(1).strip()
-        high_text = range_match.group(2).strip()
-        unit = range_match.group(3).lower()
-        item = singularize(range_match.group(4).strip())
 
-        high = fraction_to_float(high_text)
-        if high is None:
-            return None, None, item
+    if amount_match:
+        amount_text = amount_match.group(0).strip()
+        rest = ingredient[len(amount_text):].strip()
+    else:
+        # No amount found → unitless item
+        return None, None, singularize(ingredient)
 
-        if unit in UNIT_MAP:
-            norm_unit, multiplier = UNIT_MAP[unit]
-            return high * multiplier, norm_unit, item
+    # ✅ Step 2: extract the unit (letters only)
+    unit_match = re.match(r"^([a-zA-Z]+)", rest)
+    if unit_match:
+        unit = unit_match.group(1).lower()
+        item = rest[len(unit):].strip()
+    else:
+        # No unit → treat as unitless
+        return None, None, singularize(rest)
 
-        return high, unit, item
+    # ✅ Step 3: convert amount text to float
+    amount = fraction_to_float(amount_text)
+    if amount is None:
+        return None, None, singularize(item)
 
-    # ✅ Single value (supports unicode + mixed + no‑space fractions)
-    match = re.match(
-        r"^\s*([\d\s\/\.\u00BC-\u00BE\u2150-\u215E]+)\s*([a-zA-Z]+)\s+(.*)$",
-        ingredient
-    )
-    if match:
-        amount_text = match.group(1).strip()
-        unit = match.group(2).lower()
-        item = singularize(match.group(3).strip())
+    # ✅ Step 4: normalise unit
+    if unit in UNIT_MAP:
+        norm_unit, multiplier = UNIT_MAP[unit]
+        return amount * multiplier, norm_unit, singularize(item)
 
-        amount = fraction_to_float(amount_text)
-        if amount is None:
-            return None, None, item
-
-        if unit in UNIT_MAP:
-            norm_unit, multiplier = UNIT_MAP[unit]
-            return amount * multiplier, norm_unit, item
-
-        return amount, unit, item
-
-    # ✅ Unitless items
-    return None, None, singularize(ingredient)
+    return amount, unit, singularize(item)
 
 # ✅ Combine duplicate ingredients
 def combine_ingredients(ingredients):
