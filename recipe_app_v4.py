@@ -189,8 +189,9 @@ def format_amount(amount, unit):
     return f"{amount}{unit}" if unit else str(amount)
 
 if "recipes" not in st.session_state:
-    st.session_state.recipes = pd.DataFrame(columns=["name", "ingredients", "instructions"])
+    st.session_state.recipes = pd.DataFrame(columns=["name", "ingredients", "instructions", "shopping_list"])
 
+ 
 # --- Manual recipe entry form ---
 with st.form("add_recipe"):
     recipe_name = st.text_input("Recipe Name")
