@@ -4,8 +4,6 @@ import streamlit as st
 import re
 from fractions import Fraction
 
-st.title("📖 Recipe Finder")
-
 # ✅ Ensure shopping list exists
 if "shopping_list" not in st.session_state:
     st.session_state.shopping_list = []
