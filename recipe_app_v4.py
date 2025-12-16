@@ -4,44 +4,23 @@ import streamlit as st
 import re
 from fractions import Fraction
 
-# ✅ Ensure shopping list exists
-if "shopping_list" not in st.session_state:
-    st.session_state.shopping_list = []
-
-# ✅ Ensure recipes exists
-if "recipes" not in st.session_state:
-    st.session_state.recipes = pd.DataFrame(columns=["Recipe Name", "Ingredients", "Instructions"])
-
 # ✅ Unit normalisation map
 UNIT_MAP = {
-    # weight
-    "g": ("g", 1),
-    "gram": ("g", 1),
-    "grams": ("g", 1),
-    "kg": ("g", 1000),
-    "kilogram": ("g", 1000),
-    "kilograms": ("g", 1000),
+    "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
+    "kg": ("g", 1000), "kilogram": ("g", 1000), "kilograms": ("g", 1000),
 
-    # volume
-    "ml": ("ml", 1),
-    "millilitre": ("ml", 1),
-    "milliliter": ("ml", 1),
-    "l": ("ml", 1000),
-    "litre": ("ml", 1000),
-    "liter": ("ml", 1000),
+    "ml": ("ml", 1), "millilitre": ("ml", 1), "milliliter": ("ml", 1),
+    "l": ("ml", 1000), "litre": ("ml", 1000), "liter": ("ml", 1000),
 
-    # spoons
-    "tbsp": ("tbsp", 1),
-    "tablespoon": ("tbsp", 1),
-    "tablespoons": ("tbsp", 1),
-
-    "tsp": ("tsp", 1),
-    "teaspoon": ("tsp", 1),
-    "teaspoons": ("tsp", 1),
+    "tbsp": ("tbsp", 1), "tablespoon": ("tbsp", 1), "tablespoons": ("tbsp", 1),
+    "tsp": ("tsp", 1), "teaspoon": ("tsp", 1), "teaspoons": ("tsp", 1),
 }
 
-# ✅ Fraction converter
+# ✅ Fraction converter (handles unicode, mixed numbers, no‑space fractions)
 def fraction_to_float(text):
+    # Remove zero‑width and non‑breaking spaces
+    text = text.replace("\u200b", "").replace("\u2009", "").replace("\u202f", "").replace("\xa0", "")
+
     unicode_fracs = {
         "¼": 1/4, "½": 1/2, "¾": 3/4,
         "⅐": 1/7, "⅑": 1/9, "⅒": 1/10,
@@ -51,14 +30,14 @@ def fraction_to_float(text):
         "⅛": 1/8, "⅜": 3/8, "⅝": 5/8, "⅞": 7/8,
     }
 
-    # Replace unicode fractions with decimals
+    # ✅ Convert unicode fractions even when attached to a number (e.g., "2½")
     for sym, val in unicode_fracs.items():
         if sym in text:
             text = text.replace(sym, f" {val} ")
 
     text = text.strip()
 
-    # Mixed number: "2 1/2"
+    # ✅ Mixed number: "2 1/2"
     if " " in text and "/" in text:
         whole, frac = text.split(" ", 1)
         try:
@@ -66,14 +45,14 @@ def fraction_to_float(text):
         except:
             return None
 
-    # Simple fraction: "1/2"
+    # ✅ Simple fraction: "1/2"
     if "/" in text:
         try:
             return float(Fraction(text))
         except:
             return None
 
-    # Normal number
+    # ✅ Normal number
     try:
         return float(text)
     except:
@@ -84,12 +63,9 @@ def singularize(item):
     item = item.strip().lower()
 
     irregular = {
-        "tomatoes": "tomato",
-        "potatoes": "potato",
-        "leaves": "leaf",
-        "knives": "knife",
-        "loaves": "loaf",
-        "berries": "berry",
+        "tomatoes": "tomato", "potatoes": "potato",
+        "leaves": "leaf", "knives": "knife",
+        "loaves": "loaf", "berries": "berry",
         "cloves": "clove",
     }
 
@@ -107,68 +83,53 @@ def singularize(item):
 
     return item
 
-# ✅ Ingredient parser (fractions + ranges + units + plural handling)
+# ✅ Ingredient parser (now handles ALL fraction formats)
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
 
-    # ✅ Fraction ranges like "1/2-3/4 cup rice" or "½–1 tbsp oil"
+    # ✅ Fraction ranges like "1/2–3/4 cup sugar"
     range_match = re.match(
-        r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*[-–]\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        r"^\s*([\d\/\.\s¼½¾⅐-⅞]+)\s*[-–]\s*([\d\/\.\s¼½¾⅐-⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
         ingredient
     )
     if range_match:
         low_text = range_match.group(1).strip()
         high_text = range_match.group(2).strip()
         unit = range_match.group(3).lower()
-        item = range_match.group(4).strip().lower()
+        item = singularize(range_match.group(4).strip())
 
-        low = fraction_to_float(low_text)
         high = fraction_to_float(high_text)
-
-        # ✅ Safety: if fraction fails, treat as unitless
         if high is None:
-            item = singularize(item)
             return None, None, item
-
-        amount = high  # use upper value
 
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
-            amount = amount * multiplier
-            item = singularize(item)
-            return amount, norm_unit, item
+            return high * multiplier, norm_unit, item
 
-        item = singularize(item)
-        return amount, unit, item
+        return high, unit, item
 
-    # ✅ Normal single-value ingredients (including fractions)
-    pattern = r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$"
-    match = re.match(pattern, ingredient)
-
+    # ✅ Single value (supports unicode + mixed + no‑space fractions)
+    match = re.match(
+        r"^\s*([\d\/\.\s¼½¾⅐-⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        ingredient
+    )
     if match:
         amount_text = match.group(1).strip()
         unit = match.group(2).lower()
-        item = match.group(3).strip().lower()
+        item = singularize(match.group(3).strip())
 
         amount = fraction_to_float(amount_text)
-
-        # ✅ Safety: if amount couldn't be parsed, treat as unitless
         if amount is None:
-            item = singularize(item)
             return None, None, item
 
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
-            amount = amount * multiplier
-            item = singularize(item)
-            return amount, norm_unit, item
+            return amount * multiplier, norm_unit, item
 
-        item = singularize(item)
         return amount, unit, item
 
-    # ✅ Unitless items (e.g., "onions")
-    item = singularize(ingredient)
-    return None, None, item
+    # ✅ Unitless items
+    return None, None, singularize(ingredient)
 
 # ✅ Combine duplicate ingredients
 def combine_ingredients(ingredients):
@@ -184,23 +145,17 @@ def combine_ingredients(ingredients):
         if amount is not None:
             combined[key] += amount
         else:
-            combined[key] += 1  # count unitless items
+            combined[key] += 1
 
     return combined
 
-# ✅ Format amounts nicely (1000g → 1kg, 1500ml → 1.5l)
+# ✅ Format amounts nicely
 def format_amount(amount, unit):
     if unit == "g" and amount >= 1000:
         return f"{amount/1000:.1f}kg"
     if unit == "ml" and amount >= 1000:
         return f"{amount/1000:.1f}l"
     return f"{amount}{unit}" if unit else str(amount)
-
-if "recipes" not in st.session_state:
-    st.session_state.recipes = pd.DataFrame(columns=["name", "ingredients", "instructions"])
-
-if "shopping_list" not in st.session_state:
-    st.session_state.shopping_list = []
 
 # --- Manual recipe entry form ---
 with st.form("add_recipe"):
