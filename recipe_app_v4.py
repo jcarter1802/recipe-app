@@ -190,7 +190,7 @@ def format_amount(amount, unit):
 
 if "recipes" not in st.session_state:
     st.session_state.recipes = pd.DataFrame(columns=["name", "ingredients", "instructions"])
-    
+
 # --- Manual recipe entry form ---
 with st.form("add_recipe"):
     recipe_name = st.text_input("Recipe Name")
@@ -214,8 +214,8 @@ if submitted and recipe_name.strip() and ingredients.strip():
     st.success(f"Added recipe: {recipe_name} ({servings} servings)")
 
 # --- Search function ---
-def search_recipes(search_ingredients, threshold=85, min_percentage=0.5):
-    search_ingredients = [s.strip().lower() for s in search_ingredients]
+def search_recipes(recipes, search_terms, threshold=0.5, min_percentage=0):
+    search_ingredients = [s.strip().lower() for s in search_terms]
     results = []
 
     for _, row in recipes.iterrows():
@@ -254,7 +254,9 @@ if st.button("Search"):
     if search_input.strip():
         search_terms = [term.strip() for term in search_input.split(",")]
         st.session_state.matches = search_recipes(
-            search_terms, threshold=threshold, min_percentage=min_percentage
+            search_terms,
+            threshold=threshold,
+            min_percentage=min_percentage
         )
     else:
         st.error("Please enter at least one ingredient.")  # ✅ only shows if Search clicked with empty field
@@ -262,7 +264,9 @@ if st.button("Search"):
 # --- Step 2: Results display ---
 if "matches" in st.session_state and st.session_state.matches:
     for match in st.session_state.matches:
-        recipe_row = recipes[recipes["Recipe Name"] == match["Recipe"]].iloc[0]
+        recipe_row = st.session_state.recipes[
+            st.session_state.recipes["Recipe Name"] == match["Recipe"]
+            ].iloc[0]
         servings = recipe_row.get("Servings", "N/A")
 
         st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
