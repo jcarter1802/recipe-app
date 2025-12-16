@@ -1,68 +1,8 @@
 import pandas as pd
 from rapidfuzz import fuzz
 import streamlit as st
-
-# ✅ Unit normalisation map
-UNIT_MAP = {
-    # weight
-    "g": ("g", 1),
-    "gram": ("g", 1),
-    "grams": ("g", 1),
-    "kg": ("g", 1000),
-    "kilogram": ("g", 1000),
-    "kilograms": ("g", 1000),
-
-    # volume
-    "ml": ("ml", 1),
-    "millilitre": ("ml", 1),
-    "milliliter": ("ml", 1),
-    "l": ("ml", 1000),
-    "litre": ("ml", 1000),
-    "liter": ("ml", 1000),
-
-    # spoons
-    "tbsp": ("tbsp", 1),
-    "tablespoon": ("tbsp", 1),
-    "tablespoons": ("tbsp", 1),
-
-    "tsp": ("tsp", 1),
-    "teaspoon": ("tsp", 1),
-    "teaspoons": ("tsp", 1),
-}
-
-# ✅ Plural → singular conversion
-def singularize(item):
-    item = item.strip().lower()
-
-    # Irregular plurals
-    irregular = {
-        "tomatoes": "tomato",
-        "potatoes": "potato",
-        "leaves": "leaf",
-        "knives": "knife",
-        "loaves": "loaf",
-        "berries": "berry",
-        "cloves": "clove",
-    }
-
-    if item in irregular:
-        return irregular[item]
-
-    # Words ending in "ies" → "y" (berries → berry)
-    if item.endswith("ies"):
-        return item[:-3] + "y"
-
-    # Words ending in "es" (but not ches/shes/xes/sses)
-    if item.endswith("es") and not item.endswith(("ches", "shes", "xes", "sses")):
-        return item[:-2]
-
-    # Words ending in "s" → remove s
-    if item.endswith("s"):
-        return item[:-1]
-
-    return item
-
 import re
+from fractions import Fraction
 
 # ✅ Unit normalisation map
 UNIT_MAP = {
@@ -92,11 +32,43 @@ UNIT_MAP = {
     "teaspoons": ("tsp", 1),
 }
 
+# ✅ Fraction converter
+def fraction_to_float(text):
+    unicode_fracs = {
+        "¼": 1/4, "½": 1/2, "¾": 3/4,
+        "⅐": 1/7, "⅑": 1/9, "⅒": 1/10,
+        "⅓": 1/3, "⅔": 2/3,
+        "⅕": 1/5, "⅖": 2/5, "⅗": 3/5, "⅘": 4/5,
+        "⅙": 1/6, "⅚": 5/6,
+        "⅛": 1/8, "⅜": 3/8, "⅝": 5/8, "⅞": 7/8,
+    }
+
+    # Replace unicode fractions with decimals
+    for sym, val in unicode_fracs.items():
+        if sym in text:
+            text = text.replace(sym, f" {val} ")
+
+    text = text.strip()
+
+    # Mixed number: "2 1/2"
+    if " " in text and "/" in text:
+        whole, frac = text.split(" ", 1)
+        return float(whole) + float(Fraction(frac))
+
+    # Simple fraction: "1/2"
+    if "/" in text:
+        return float(Fraction(text))
+
+    # Normal number
+    try:
+        return float(text)
+    except:
+        return None
+
 # ✅ Plural → singular conversion
 def singularize(item):
     item = item.strip().lower()
 
-    # Irregular plurals
     irregular = {
         "tomatoes": "tomato",
         "potatoes": "potato",
@@ -110,42 +82,37 @@ def singularize(item):
     if item in irregular:
         return irregular[item]
 
-    # Words ending in "ies" → "y" (berries → berry)
     if item.endswith("ies"):
         return item[:-3] + "y"
 
-    # Words ending in "es" (but not ches/shes/xes/sses)
     if item.endswith("es") and not item.endswith(("ches", "shes", "xes", "sses")):
         return item[:-2]
 
-    # Words ending in "s" → remove s
     if item.endswith("s"):
         return item[:-1]
 
     return item
 
-
-# ✅ Ingredient parser (ranges + units + plural handling)
+# ✅ Ingredient parser (fractions + ranges + units + plural handling)
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
 
-    # ✅ Handle ranges like "1/2-3/4 cup rice" or "½–1 cup rice"
-    range_match = re.match(r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*[-–]\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
-                           ingredient)
+    # ✅ Fraction ranges like "1/2-3/4 cup rice" or "½–1 tbsp oil"
+    range_match = re.match(
+        r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*[-–]\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        ingredient
+    )
     if range_match:
         low_text = range_match.group(1).strip()
         high_text = range_match.group(2).strip()
         unit = range_match.group(3).lower()
         item = range_match.group(4).strip().lower()
 
-        # ✅ Convert fractions
         low = fraction_to_float(low_text)
         high = fraction_to_float(high_text)
 
-        # ✅ Use upper value
-        amount = high
+        amount = high  # ✅ use upper value
 
-        # ✅ Normalise unit
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
             amount = amount * multiplier
@@ -155,7 +122,7 @@ def parse_ingredient(ingredient):
         item = singularize(item)
         return amount, unit, item
 
-    # ✅ Handle normal single-value ingredients (including fractions)
+    # ✅ Normal single-value ingredients (including fractions)
     pattern = r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$"
     match = re.match(pattern, ingredient)
 
@@ -164,10 +131,8 @@ def parse_ingredient(ingredient):
         unit = match.group(2).lower()
         item = match.group(3).strip().lower()
 
-        # ✅ Convert fraction → float
         amount = fraction_to_float(amount_text)
 
-        # ✅ Normalise unit
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
             amount = amount * multiplier
@@ -180,7 +145,6 @@ def parse_ingredient(ingredient):
     # ✅ Unitless items (e.g., "onions")
     item = singularize(ingredient)
     return None, None, item
-
 
 # ✅ Combine duplicate ingredients
 def combine_ingredients(ingredients):
@@ -199,7 +163,6 @@ def combine_ingredients(ingredients):
             combined[key] += 1  # count unitless items
 
     return combined
-
 
 # ✅ Format amounts nicely (1000g → 1kg, 1500ml → 1.5l)
 def format_amount(amount, unit):
