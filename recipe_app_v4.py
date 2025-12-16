@@ -99,7 +99,7 @@ def parse_ingredient(ingredient):
 
     # ✅ Fraction ranges like "1/2–3/4 cup sugar"
     range_match = re.match(
-        r"^\s*([\d\/\.\s¼½¾⅐-⅞]+)\s*[-–]\s*([\d\/\.\s¼½¾⅐-⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        r"^\s*([\d\/\.\s¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+)\s*[-–]\s*([\d\/\.\s¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
         ingredient
     )
     if range_match:
@@ -120,7 +120,7 @@ def parse_ingredient(ingredient):
 
     # ✅ Single value (supports unicode + mixed + no‑space fractions)
     match = re.match(
-        r"^\s*([\d\/\.\s¼½¾⅐-⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        r"^\s*([\d\/\.\s¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
         ingredient
     )
     if match:
@@ -266,7 +266,7 @@ st.write("DEBUG PARSE RESULTS:")
 for ing in st.session_state.shopping_list:
     amount, unit, item = parse_ingredient(ing)
     st.write(f"'{ing}' → amount={amount}, unit='{unit}', item='{item}'")
-    
+
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
 
