@@ -1,7 +1,6 @@
 import pandas as pd
 from rapidfuzz import fuzz
 import streamlit as st
-import re
 
 # ✅ Unit normalisation map
 UNIT_MAP = {
@@ -210,38 +209,45 @@ def format_amount(amount, unit):
         return f"{amount/1000:.1f}l"
     return f"{amount}{unit}" if unit else str(amount)
 
-# ✅ Ingredient parser (ranges + units + plural handling)
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
 
-    # ✅ Handle ranges like "500-600g chicken breast"
-    range_match = re.match(r"^\s*(\d+)\s*-\s*(\d+)\s*([a-zA-Z]+)\s+(.*)$", ingredient)
+    # ✅ Handle fraction ranges like "1/2-3/4 cup rice" or "½–1 tbsp oil"
+    range_match = re.match(
+        r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*[-–]\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        ingredient
+    )
     if range_match:
-        low = float(range_match.group(1))
-        high = float(range_match.group(2))
+        low_text = range_match.group(1).strip()
+        high_text = range_match.group(2).strip()
         unit = range_match.group(3).lower()
         item = range_match.group(4).strip().lower()
 
-        # Normalise unit
+        low = fraction_to_float(low_text)
+        high = fraction_to_float(high_text)
+
+        amount = high  # ✅ use upper value
+
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
-            high = high * multiplier
+            amount = amount * multiplier
             item = singularize(item)
-            return high, norm_unit, item
+            return amount, norm_unit, item
 
         item = singularize(item)
-        return high, unit, item
+        return amount, unit, item
 
-    # ✅ Handle normal single-value ingredients
-    pattern = r"^\s*([\d\.]+)\s*([a-zA-Z]+)\s+(.*)$"
+    # ✅ Handle normal single-value ingredients (including fractions)
+    pattern = r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$"
     match = re.match(pattern, ingredient)
 
     if match:
-        amount = float(match.group(1))
+        amount_text = match.group(1).strip()
         unit = match.group(2).lower()
         item = match.group(3).strip().lower()
 
-        # Normalise unit
+        amount = fraction_to_float(amount_text)
+
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
             amount = amount * multiplier
@@ -254,8 +260,6 @@ def parse_ingredient(ingredient):
     # ✅ Unitless items (e.g., "onions")
     item = singularize(ingredient)
     return None, None, item
-
-
 # ✅ Combine duplicate ingredients
 def combine_ingredients(ingredients):
     combined = {}
