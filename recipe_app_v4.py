@@ -4,6 +4,16 @@ import streamlit as st
 import re
 from fractions import Fraction
 
+st.title("📖 Recipe Finder")
+
+# ✅ Ensure shopping list exists
+if "shopping_list" not in st.session_state:
+    st.session_state.shopping_list = []
+
+# ✅ Ensure recipes exists
+if "recipes" not in st.session_state:
+    st.session_state.recipes = pd.DataFrame(columns=["Recipe Name", "Ingredients", "Instructions"])
+
 # ✅ Unit normalisation map
 UNIT_MAP = {
     # weight
@@ -189,9 +199,11 @@ def format_amount(amount, unit):
     return f"{amount}{unit}" if unit else str(amount)
 
 if "recipes" not in st.session_state:
-    st.session_state.recipes = pd.DataFrame(columns=["name", "ingredients", "instructions", "shopping_list"])
+    st.session_state.recipes = pd.DataFrame(columns=["name", "ingredients", "instructions"])
 
- 
+if "shopping_list" not in st.session_state:
+    st.session_state.shopping_list = []
+
 # --- Manual recipe entry form ---
 with st.form("add_recipe"):
     recipe_name = st.text_input("Recipe Name")
