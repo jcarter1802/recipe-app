@@ -53,11 +53,17 @@ def fraction_to_float(text):
     # Mixed number: "2 1/2"
     if " " in text and "/" in text:
         whole, frac = text.split(" ", 1)
-        return float(whole) + float(Fraction(frac))
+        try:
+            return float(whole) + float(Fraction(frac))
+        except:
+            return None
 
     # Simple fraction: "1/2"
     if "/" in text:
-        return float(Fraction(text))
+        try:
+            return float(Fraction(text))
+        except:
+            return None
 
     # Normal number
     try:
@@ -111,7 +117,12 @@ def parse_ingredient(ingredient):
         low = fraction_to_float(low_text)
         high = fraction_to_float(high_text)
 
-        amount = high  # ✅ use upper value
+        # ✅ Safety: if fraction fails, treat as unitless
+        if high is None:
+            item = singularize(item)
+            return None, None, item
+
+        amount = high  # use upper value
 
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
@@ -133,6 +144,11 @@ def parse_ingredient(ingredient):
 
         amount = fraction_to_float(amount_text)
 
+        # ✅ Safety: if amount couldn't be parsed, treat as unitless
+        if amount is None:
+            item = singularize(item)
+            return None, None, item
+
         if unit in UNIT_MAP:
             norm_unit, multiplier = UNIT_MAP[unit]
             amount = amount * multiplier
@@ -171,98 +187,6 @@ def format_amount(amount, unit):
     if unit == "ml" and amount >= 1000:
         return f"{amount/1000:.1f}l"
     return f"{amount}{unit}" if unit else str(amount)
-
-def parse_ingredient(ingredient):
-    ingredient = ingredient.strip().lower()
-
-    # ✅ Handle fraction ranges like "1/2-3/4 cup rice" or "½–1 tbsp oil"
-    range_match = re.match(
-        r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*[-–]\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
-        ingredient
-    )
-    if range_match:
-        low_text = range_match.group(1).strip()
-        high_text = range_match.group(2).strip()
-        unit = range_match.group(3).lower()
-        item = range_match.group(4).strip().lower()
-
-        low = fraction_to_float(low_text)
-        high = fraction_to_float(high_text)
-
-        amount = high  # ✅ use upper value
-
-        if unit in UNIT_MAP:
-            norm_unit, multiplier = UNIT_MAP[unit]
-            amount = amount * multiplier
-            item = singularize(item)
-            return amount, norm_unit, item
-
-        item = singularize(item)
-        return amount, unit, item
-
-    # ✅ Handle normal single-value ingredients (including fractions)
-    pattern = r"^\s*([\d\s\/\.\¼\½\¾\⅐-\⅞]+)\s*([a-zA-Z]+)\s+(.*)$"
-    match = re.match(pattern, ingredient)
-
-    if match:
-        amount_text = match.group(1).strip()
-        unit = match.group(2).lower()
-        item = match.group(3).strip().lower()
-
-        amount = fraction_to_float(amount_text)
-
-        if unit in UNIT_MAP:
-            norm_unit, multiplier = UNIT_MAP[unit]
-            amount = amount * multiplier
-            item = singularize(item)
-            return amount, norm_unit, item
-
-        item = singularize(item)
-        return amount, unit, item
-
-    # ✅ Unitless items (e.g., "onions")
-    item = singularize(ingredient)
-    return None, None, item
-# ✅ Combine duplicate ingredients
-def combine_ingredients(ingredients):
-    combined = {}
-
-    for ing in ingredients:
-        amount, unit, item = parse_ingredient(ing)
-        key = (item, unit)
-
-        if key not in combined:
-            combined[key] = 0
-
-        if amount is not None:
-            combined[key] += amount
-        else:
-            combined[key] += 1  # count unitless items
-
-    return combined
-
-
-# ✅ Format amounts nicely (1000g → 1kg, 1500ml → 1.5l)
-def format_amount(amount, unit):
-    if unit == "g" and amount >= 1000:
-        return f"{amount/1000:.1f}kg"
-    if unit == "ml" and amount >= 1000:
-        return f"{amount/1000:.1f}l"
-    return f"{amount}{unit}" if unit else str(amount)
-# --- Initialize recipes and shopping list in session_state ---
-if "recipes" not in st.session_state:
-    base_df = pd.read_excel("Copy of cooking.xlsx", sheet_name="Sheet1")
-    base_df["Ingredients"] = base_df["Ingredients"].apply(
-        lambda x: [i.strip().lower() for i in str(x).split(",")]
-    )
-    if "Servings" not in base_df.columns:
-        base_df["Servings"] = None
-    st.session_state.recipes = base_df.copy()
-
-if "shopping_list" not in st.session_state:
-    st.session_state.shopping_list = []
-
-recipes = st.session_state.recipes
 
 # --- Manual recipe entry form ---
 with st.form("add_recipe"):
