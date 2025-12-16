@@ -4,6 +4,16 @@ import streamlit as st
 import re
 from fractions import Fraction
 
+# ✅ Ensure recipes DataFrame exists
+if "recipes" not in st.session_state:
+    st.session_state.recipes = pd.DataFrame(
+        columns=["Recipe Name", "Ingredients", "Instructions"]
+    )
+
+# ✅ Ensure shopping list exists
+if "shopping_list" not in st.session_state:
+    st.session_state.shopping_list = []
+
 # ✅ Unit normalisation map
 UNIT_MAP = {
     "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
