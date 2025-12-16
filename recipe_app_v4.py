@@ -100,9 +100,19 @@ def parse_ingredient(ingredient):
     # Remove zero‑width and non‑breaking spaces
     ingredient = ingredient.replace("\u200b", "").replace("\u2009", "").replace("\u202f", "").replace("\xa0", "")
 
-    # ✅ Step 1: extract the amount (unicode fraction, mixed number, decimal, or normal fraction)
+    # ✅ Step 1: extract ANY valid amount pattern
     amount_match = re.match(
-        r"^([\d]+(?:\s+[\u00BC-\u00BE\u2150-\u215E])?|[\u00BC-\u00BE\u2150-\u215E]|[\d]+\s+[\d\/]+|[\d\/]+|[\d\.]+)",
+        r"^("
+
+        r"\d+\s+[\u00BC-\u00BE\u2150-\u215E]"      # mixed unicode fraction: "2 ½"
+        r"|\d+[\u00BC-\u00BE\u2150-\u215E]"        # attached unicode fraction: "2½"
+        r"|[\u00BC-\u00BE\u2150-\u215E]"           # unicode fraction alone: "½"
+        r"|\d+\s+\d+/\d+"                           # mixed normal fraction: "2 1/2"
+        r"|\d+/\d+"                                 # normal fraction: "1/2"
+        r"|\d+\.\d+"                                # decimal: "1.5"
+        r"|\d+"                                     # whole number: "2"
+
+        r")",
         ingredient
     )
 
@@ -110,19 +120,17 @@ def parse_ingredient(ingredient):
         amount_text = amount_match.group(0).strip()
         rest = ingredient[len(amount_text):].strip()
     else:
-        # No amount found → unitless item
         return None, None, singularize(ingredient)
 
-    # ✅ Step 2: extract the unit (letters only)
+    # ✅ Step 2: extract unit
     unit_match = re.match(r"^([a-zA-Z]+)", rest)
     if unit_match:
         unit = unit_match.group(1).lower()
         item = rest[len(unit):].strip()
     else:
-        # No unit → treat as unitless
         return None, None, singularize(rest)
 
-    # ✅ Step 3: convert amount text to float
+    # ✅ Step 3: convert amount
     amount = fraction_to_float(amount_text)
     if amount is None:
         return None, None, singularize(item)
@@ -133,7 +141,6 @@ def parse_ingredient(ingredient):
         return amount * multiplier, norm_unit, singularize(item)
 
     return amount, unit, singularize(item)
-
 # ✅ Combine duplicate ingredients
 def combine_ingredients(ingredients):
     combined = {}
