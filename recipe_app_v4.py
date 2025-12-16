@@ -97,9 +97,19 @@ def singularize(item):
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
 
-    # Remove zero‑width and non‑breaking spaces
-    ingredient = ingredient.replace("\u200b", "").replace("\u2009", "").replace("\u202f", "").replace("\xa0", "")
+    # Normalise all weird spaces to a normal space
+    ingredient = (
+        ingredient
+        .replace("\u00A0", " ")  # non-breaking space
+        .replace("\u2009", " ")  # thin space
+        .replace("\u202F", " ")  # narrow no-break space
+        .replace("\u200A", " ")  # hair space
+        .replace("\u200B", "")  # zero-width space
+        .replace("\uFEFF", "")  # zero-width no-break space
+    )
 
+    ingredient = ingredient.strip().lower()
+    
     # ✅ Step 1: extract ANY valid amount pattern
     amount_match = re.match(
         r"^("
