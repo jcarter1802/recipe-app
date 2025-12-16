@@ -262,6 +262,11 @@ if "matches" in st.session_state and st.session_state.matches:
             for ing in recipe_row["Ingredients"]:
                 st.write(f"- {ing}")
 
+st.write("DEBUG PARSE RESULTS:")
+for ing in st.session_state.shopping_list:
+    amount, unit, item = parse_ingredient(ing)
+    st.write(f"'{ing}' → amount={amount}, unit='{unit}', item='{item}'")
+    
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
 
