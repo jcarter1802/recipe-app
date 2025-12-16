@@ -14,7 +14,6 @@ if "recipes" not in st.session_state:
 if "shopping_list" not in st.session_state:
     st.session_state.shopping_list = []
 
-# ✅ Unit normalisation map
 UNIT_MAP = {
     "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
     "kg": ("g", 1000), "kilogram": ("g", 1000), "kilograms": ("g", 1000),
@@ -24,12 +23,22 @@ UNIT_MAP = {
 
     "tbsp": ("tbsp", 1), "tablespoon": ("tbsp", 1), "tablespoons": ("tbsp", 1),
     "tsp": ("tsp", 1), "teaspoon": ("tsp", 1), "teaspoons": ("tsp", 1),
+    "cup": ("cup", 1), "cups": ("cup", 1)
 }
 
-# ✅ Fraction converter (handles unicode, mixed numbers, no‑space fractions)
+from fractions import Fraction
+import re
+
 def fraction_to_float(text):
-    # Remove zero‑width and non‑breaking spaces
-    text = text.replace("\u200b", "").replace("\u2009", "").replace("\u202f", "").replace("\xa0", "")
+    # Clean weird spaces
+    text = (
+        text.replace("\u00A0", " ")
+            .replace("\u2009", " ")
+            .replace("\u202F", " ")
+            .replace("\u200A", " ")
+            .replace("\u200B", "")
+            .replace("\uFEFF", "")
+    )
 
     unicode_fracs = {
         "¼": 1/4, "½": 1/2, "¾": 3/4,
@@ -40,14 +49,13 @@ def fraction_to_float(text):
         "⅛": 1/8, "⅜": 3/8, "⅝": 5/8, "⅞": 7/8,
     }
 
-    # ✅ Convert unicode fractions even when attached to a number (e.g., "2½")
+    # Replace unicode fractions with numeric equivalents
     for sym, val in unicode_fracs.items():
-        if sym in text:
-            text = text.replace(sym, f" {val} ")
+        text = text.replace(sym, f" {val} ")
 
     text = text.strip()
 
-    # ✅ Mixed number: "2 1/2"
+    # Mixed number: "2 1/2"
     if " " in text and "/" in text:
         whole, frac = text.split(" ", 1)
         try:
@@ -55,20 +63,19 @@ def fraction_to_float(text):
         except:
             return None
 
-    # ✅ Simple fraction: "1/2"
+    # Simple fraction: "1/2"
     if "/" in text:
         try:
             return float(Fraction(text))
         except:
             return None
 
-    # ✅ Normal number
+    # Decimal or whole number
     try:
         return float(text)
     except:
         return None
 
-# ✅ Plural → singular conversion
 def singularize(item):
     item = item.strip().lower()
 
@@ -93,65 +100,59 @@ def singularize(item):
 
     return item
 
-# ✅ Ingredient parser (now handles ALL fraction formats)
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
 
-    # Normalise all weird spaces to a normal space
+    # Normalise all weird spaces
     ingredient = (
-        ingredient
-        .replace("\u00A0", " ")  # non-breaking space
-        .replace("\u2009", " ")  # thin space
-        .replace("\u202F", " ")  # narrow no-break space
-        .replace("\u200A", " ")  # hair space
-        .replace("\u200B", "")  # zero-width space
-        .replace("\uFEFF", "")  # zero-width no-break space
+        ingredient.replace("\u00A0", " ")
+                  .replace("\u2009", " ")
+                  .replace("\u202F", " ")
+                  .replace("\u200A", " ")
+                  .replace("\u200B", "")
+                  .replace("\uFEFF", "")
     )
 
-    ingredient = ingredient.strip().lower()
-    
-    # ✅ Step 1: extract ANY valid amount pattern
+    # ✅ Extract ANY valid amount format
     amount_match = re.match(
         r"^("
-
-        r"\d+\s+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # mixed unicode fraction: "2 ½", "1 ⅓"
-        r"|\d+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # attached unicode fraction: "2½", "1⅓"
-        r"|[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # unicode fraction alone: "½", "⅓"
-        r"|\d+\s+\d+/\d+"  # mixed normal fraction: "2 1/2"
-        r"|\d+/\d+"  # normal fraction: "1/2"
-        r"|\d+\.\d+"  # decimal: "1.5"
-        r"|\d+"  # whole number: "2"
-
+        r"\d+\s+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"   # mixed unicode fraction: "2 ½", "1 ⅓"
+        r"|\d+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"       # attached unicode fraction: "2½", "1⅓"
+        r"|[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"          # unicode fraction alone: "½"
+        r"|\d+\s+\d+/\d+"                    # mixed normal fraction: "2 1/2"
+        r"|\d+/\d+"                          # normal fraction: "1/2"
+        r"|\d+\.\d+"                         # decimal: "1.5"
+        r"|\d+"                              # whole number: "2"
         r")",
         ingredient
     )
 
-    if amount_match:
-        amount_text = amount_match.group(0).strip()
-        rest = ingredient[len(amount_text):].strip()
-    else:
+    if not amount_match:
         return None, None, singularize(ingredient)
 
-    # ✅ Step 2: extract unit
+    amount_text = amount_match.group(0)
+    rest = ingredient[len(amount_text):].strip()
+
+    # ✅ Extract unit
     unit_match = re.match(r"^([a-zA-Z]+)", rest)
-    if unit_match:
-        unit = unit_match.group(1).lower()
-        item = rest[len(unit):].strip()
-    else:
+    if not unit_match:
         return None, None, singularize(rest)
 
-    # ✅ Step 3: convert amount
+    unit = unit_match.group(1).lower()
+    item = rest[len(unit):].strip()
+
+    # ✅ Convert amount
     amount = fraction_to_float(amount_text)
     if amount is None:
         return None, None, singularize(item)
 
-    # ✅ Step 4: normalise unit
+    # ✅ Normalise unit
     if unit in UNIT_MAP:
         norm_unit, multiplier = UNIT_MAP[unit]
         return amount * multiplier, norm_unit, singularize(item)
 
     return amount, unit, singularize(item)
-# ✅ Combine duplicate ingredients
+
 def combine_ingredients(ingredients):
     combined = {}
 
@@ -169,7 +170,6 @@ def combine_ingredients(ingredients):
 
     return combined
 
-# ✅ Format amounts nicely
 def format_amount(amount, unit):
     if unit == "g" and amount >= 1000:
         return f"{amount/1000:.1f}kg"
