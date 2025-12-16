@@ -254,6 +254,7 @@ if st.button("Search"):
     if search_input.strip():
         search_terms = [term.strip() for term in search_input.split(",")]
         st.session_state.matches = search_recipes(
+            st.session_state.recipes,
             search_terms,
             threshold=threshold,
             min_percentage=min_percentage
