@@ -277,6 +277,11 @@ for ing in st.session_state.shopping_list:
     amount, unit, item = parse_ingredient(ing)
     st.write(f"'{ing}' → amount={amount}, unit='{unit}', item='{item}'")
 
+st.write("UNICODE DEBUG:")
+for ing in st.session_state.shopping_list:
+    st.write([hex(ord(c)) for c in ing])
+
+    
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
 
