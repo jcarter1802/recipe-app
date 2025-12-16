@@ -104,13 +104,13 @@ def parse_ingredient(ingredient):
     amount_match = re.match(
         r"^("
 
-        r"\d+\s+[\u00BC-\u00BE\u2150-\u215E]"      # mixed unicode fraction: "2 ½"
-        r"|\d+[\u00BC-\u00BE\u2150-\u215E]"        # attached unicode fraction: "2½"
-        r"|[\u00BC-\u00BE\u2150-\u215E]"           # unicode fraction alone: "½"
-        r"|\d+\s+\d+/\d+"                           # mixed normal fraction: "2 1/2"
-        r"|\d+/\d+"                                 # normal fraction: "1/2"
-        r"|\d+\.\d+"                                # decimal: "1.5"
-        r"|\d+"                                     # whole number: "2"
+        r"\d+\s+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # mixed unicode fraction: "2 ½", "1 ⅓"
+        r"|\d+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # attached unicode fraction: "2½", "1⅓"
+        r"|[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # unicode fraction alone: "½", "⅓"
+        r"|\d+\s+\d+/\d+"  # mixed normal fraction: "2 1/2"
+        r"|\d+/\d+"  # normal fraction: "1/2"
+        r"|\d+\.\d+"  # decimal: "1.5"
+        r"|\d+"  # whole number: "2"
 
         r")",
         ingredient
