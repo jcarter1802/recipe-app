@@ -99,7 +99,7 @@ def parse_ingredient(ingredient):
 
     # ✅ Fraction ranges like "1/2–3/4 cup sugar"
     range_match = re.match(
-        r"^\s*([\d\/\.\s¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+)\s*[-–]\s*([\d\/\.\s¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        r"^\s*([\d\s\/\.\u00BC-\u00BE\u2150-\u215E]+)\s*[-–]\s*([\d\s\/\.\u00BC-\u00BE\u2150-\u215E]+)\s*([a-zA-Z]+)\s+(.*)$",
         ingredient
     )
     if range_match:
@@ -120,7 +120,7 @@ def parse_ingredient(ingredient):
 
     # ✅ Single value (supports unicode + mixed + no‑space fractions)
     match = re.match(
-        r"^\s*([\d\/\.\s¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]+)\s*([a-zA-Z]+)\s+(.*)$",
+        r"^\s*([\d\s\/\.\u00BC-\u00BE\u2150-\u215E]+)\s*([a-zA-Z]+)\s+(.*)$",
         ingredient
     )
     if match:
