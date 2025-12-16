@@ -113,16 +113,15 @@ def parse_ingredient(ingredient):
                   .replace("\uFEFF", "")
     )
 
-    # ✅ Extract ANY valid amount format
     amount_match = re.match(
         r"^("
-        r"\d+\s+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"   # mixed unicode fraction: "2 ½", "1 ⅓"
-        r"|\d+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"       # attached unicode fraction: "2½", "1⅓"
-        r"|[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"          # unicode fraction alone: "½"
-        r"|\d+\s+\d+/\d+"                    # mixed normal fraction: "2 1/2"
-        r"|\d+/\d+"                          # normal fraction: "1/2"
-        r"|\d+\.\d+"                         # decimal: "1.5"
-        r"|\d+"                              # whole number: "2"
+        r"\d+\s+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞](?=\s)"  # mixed unicode fraction with space before unit
+        r"|\d+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # attached unicode fraction
+        r"|[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞](?=\s)"  # unicode fraction alone before unit
+        r"|\d+\s+\d+/\d+"  # mixed normal fraction
+        r"|\d+/\d+"  # normal fraction
+        r"|\d+\.\d+"  # decimal
+        r"|\d+"  # whole number
         r")",
         ingredient
     )
@@ -281,7 +280,7 @@ st.write("UNICODE DEBUG:")
 for ing in st.session_state.shopping_list:
     st.write([hex(ord(c)) for c in ing])
 
-    
+
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
 
