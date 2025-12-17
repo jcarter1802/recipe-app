@@ -276,7 +276,7 @@ if "matches" in st.session_state and st.session_state.matches:
         with st.expander("Show all ingredients"):
             for ing in recipe_row["Ingredients"]:
                 st.write(f"- {ing}")
-    # Pantry comparison
+    # ✅ Pantry comparison
     missing = []
     can_make = True
 
@@ -287,21 +287,33 @@ if "matches" in st.session_state and st.session_state.matches:
         pantry_amount = st.session_state.pantry.get(key, 0)
 
         if req_amount is None:
-            continue  # skip unparseable items
+            continue
 
         if pantry_amount < req_amount:
             can_make = False
             missing.append((req_item, req_unit, req_amount - pantry_amount))
 
-        if can_make:
-            st.success("✅ You can make this recipe with what you have!")
-        else:
-            st.warning("⚠️ You're missing some ingredients:")
-            for item, unit, amt in missing:
-                if unit:
-                    st.write(f"- {format_amount(amt, unit)} {item}")
-                else:
-                    st.write(f"- {item} (x{amt})")
+    # ✅ Show pantry status
+    if can_make:
+        st.success("✅ You can make this recipe with what you have!")
+    else:
+        st.warning("⚠️ You're missing some ingredients:")
+        for item, unit, amt in missing:
+            if unit:
+                st.write(f"- {format_amount(amt, unit)} {item}")
+            else:
+                st.write(f"- {item} (x{amt})")
+
+    # ✅ Cook button (MUST be inside the loop)
+    if st.button(f"Cook {match['Recipe']}", key=f"cook_{match['Recipe']}"):
+        for ing in recipe_row["Ingredients"]:
+            amt, unit, item = parse_ingredient(ing)
+            key = (item, unit)
+
+            if amt is not None and key in st.session_state.pantry:
+                st.session_state.pantry[key] = max(0, st.session_state.pantry[key] - amt)
+
+        st.success(f"Updated pantry after cooking {match['Recipe']}.")
 
 st.header("🏡 Smart Pantry")
 
@@ -319,24 +331,7 @@ if submitted_pantry and pantry_input.strip():
         st.session_state.pantry[key] = st.session_state.pantry.get(key, 0) + amount
         st.success(f"Added {pantry_input} to pantry!")
 
-
-
-if st.button(f"Cook {match['Recipe']}", key=f"cook_{match['Recipe']}"):
-    for ing in recipe_row["Ingredients"]:
-        amt, unit, item = parse_ingredient(ing)
-        key = (item, unit)
-
-        if amt is not None and key in st.session_state.pantry:
-            st.session_state.pantry[key] = max(0, st.session_state.pantry[key] - amt)
-
-    st.success(f"Updated pantry after cooking {match['Recipe']}.")
-
-    missing_percentage = missing_count / total_ingredients
-    if missing_percentage <= 0.2:
-        st.info("✨ You can almost make this recipe — just a few things missing.")
-
 st.subheader("Your Pantry")
-
 if st.session_state.pantry:
     for (item, unit), amount in st.session_state.pantry.items():
         if unit:
@@ -345,8 +340,7 @@ if st.session_state.pantry:
             st.write(f"- {item} (x{amount})")
 else:
     st.write("Your pantry is empty.")
-
-
+    
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
 
