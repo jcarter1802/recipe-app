@@ -316,33 +316,6 @@ if "matches" in st.session_state and st.session_state.matches:
 
             st.success(f"Updated pantry after cooking {match['Recipe']}.")
 
-# ✅ SMART PANTRY UI (always visible)
-st.header("🏡 Smart Pantry")
-
-with st.form("add_to_pantry"):
-    pantry_input = st.text_input("Add ingredient to pantry (e.g., '1 ½ cup sugar')")
-    submitted_pantry = st.form_submit_button("Add to Pantry")
-
-if submitted_pantry and pantry_input.strip():
-    amount, unit, item = parse_ingredient(pantry_input)
-
-    if amount is None:
-        st.error("Could not understand that ingredient.")
-    else:
-        key = (item, unit)
-        st.session_state.pantry[key] = st.session_state.pantry.get(key, 0) + amount
-        st.success(f"Added {pantry_input} to pantry!")
-
-st.subheader("Your Pantry")
-if st.session_state.pantry:
-    for (item, unit), amount in st.session_state.pantry.items():
-        if unit:
-            st.write(f"- {format_amount(amount, unit)} {item}")
-        else:
-            st.write(f"- {item} (x{amount})")
-else:
-    st.write("Your pantry is empty.")
-    
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
 
