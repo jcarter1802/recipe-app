@@ -14,6 +14,9 @@ if "recipes" not in st.session_state:
 if "shopping_list" not in st.session_state:
     st.session_state.shopping_list = []
 
+if "pantry" not in st.session_state:
+    st.session_state.pantry = {}
+
 UNIT_MAP = {
     "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
     "kg": ("g", 1000), "kilogram": ("g", 1000), "kilograms": ("g", 1000),
@@ -273,15 +276,74 @@ if "matches" in st.session_state and st.session_state.matches:
         with st.expander("Show all ingredients"):
             for ing in recipe_row["Ingredients"]:
                 st.write(f"- {ing}")
+    # Pantry comparison
+    missing = []
+    can_make = True
 
-st.write("DEBUG PARSE RESULTS:")
-for ing in st.session_state.shopping_list:
-    amount, unit, item = parse_ingredient(ing)
-    st.write(f"'{ing}' → amount={amount}, unit='{unit}', item='{item}'")
+    for ing in recipe_row["Ingredients"]:
+        req_amount, req_unit, req_item = parse_ingredient(ing)
+        key = (req_item, req_unit)
 
-st.write("UNICODE DEBUG:")
-for ing in st.session_state.shopping_list:
-    st.write([hex(ord(c)) for c in ing])
+        pantry_amount = st.session_state.pantry.get(key, 0)
+
+        if req_amount is None:
+            continue  # skip unparseable items
+
+        if pantry_amount < req_amount:
+            can_make = False
+            missing.append((req_item, req_unit, req_amount - pantry_amount))
+
+
+st.header("🏡 Smart Pantry")
+
+with st.form("add_to_pantry"):
+    pantry_input = st.text_input("Add ingredient to pantry (e.g., '1 ½ cup sugar')")
+    submitted_pantry = st.form_submit_button("Add to Pantry")
+
+if submitted_pantry and pantry_input.strip():
+    amount, unit, item = parse_ingredient(pantry_input)
+
+    if amount is None:
+        st.error("Could not understand that ingredient.")
+    else:
+        key = (item, unit)
+        st.session_state.pantry[key] = st.session_state.pantry.get(key, 0) + amount
+        st.success(f"Added {pantry_input} to pantry!")
+
+if can_make:
+    st.success("✅ You can make this recipe with what you have!")
+else:
+    st.warning("⚠️ You're missing some ingredients:")
+    for item, unit, amt in missing:
+        if unit:
+            st.write(f"- {format_amount(amt, unit)} {item}")
+        else:
+            st.write(f"- {item} (x{amt})")
+
+if st.button(f"Cook {match['Recipe']}", key=f"cook_{match['Recipe']}"):
+    for ing in recipe_row["Ingredients"]:
+        amt, unit, item = parse_ingredient(ing)
+        key = (item, unit)
+
+        if amt is not None and key in st.session_state.pantry:
+            st.session_state.pantry[key] = max(0, st.session_state.pantry[key] - amt)
+
+    st.success(f"Updated pantry after cooking {match['Recipe']}.")
+
+    missing_percentage = missing_count / total_ingredients
+    if missing_percentage <= 0.2:
+        st.info("✨ You can almost make this recipe — just a few things missing.")
+
+st.subheader("Your Pantry")
+
+if st.session_state.pantry:
+    for (item, unit), amount in st.session_state.pantry.items():
+        if unit:
+            st.write(f"- {format_amount(amount, unit)} {item}")
+        else:
+            st.write(f"- {item} (x{amount})")
+else:
+    st.write("Your pantry is empty.")
 
 
 # --- Shopping list display ---
