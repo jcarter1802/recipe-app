@@ -256,6 +256,7 @@ if st.button("Search"):
 # --- Step 2: Results display ---
 if "matches" in st.session_state and st.session_state.matches:
     for match in st.session_state.matches:
+
         recipe_row = st.session_state.recipes[
             st.session_state.recipes["Recipe Name"] == match["Recipe"]
         ].iloc[0]
@@ -277,7 +278,7 @@ if "matches" in st.session_state and st.session_state.matches:
             for ing in recipe_row["Ingredients"]:
                 st.write(f"- {ing}")
 
-        # ✅ SMART PANTRY COMPARISON (correctly inside loop)
+        # ✅ SMART PANTRY COMPARISON
         missing = []
         can_make = True
 
@@ -294,7 +295,6 @@ if "matches" in st.session_state and st.session_state.matches:
                 can_make = False
                 missing.append((req_item, req_unit, req_amount - pantry_amount))
 
-        # ✅ Show pantry status
         if can_make:
             st.success("✅ You can make this recipe with what you have!")
         else:
@@ -305,7 +305,7 @@ if "matches" in st.session_state and st.session_state.matches:
                 else:
                     st.write(f"- {item} (x{amt})")
 
-        # ✅ Cook button (MUST be inside the loop)
+        # ✅ Cook button
         if st.button(f"Cook {match['Recipe']}", key=f"cook_{match['Recipe']}"):
             for ing in recipe_row["Ingredients"]:
                 amt, unit, item = parse_ingredient(ing)
@@ -315,6 +315,34 @@ if "matches" in st.session_state and st.session_state.matches:
                     st.session_state.pantry[key] = max(0, st.session_state.pantry[key] - amt)
 
             st.success(f"Updated pantry after cooking {match['Recipe']}.")
+
+# ✅ SMART PANTRY UI (always visible)
+st.header("🏡 Smart Pantry")
+
+with st.form("add_to_pantry"):
+    pantry_input = st.text_input("Add ingredient to pantry (e.g., '1 ½ cup sugar')")
+    submitted_pantry = st.form_submit_button("Add to Pantry")
+
+if submitted_pantry and pantry_input.strip():
+    amount, unit, item = parse_ingredient(pantry_input)
+
+    if amount is None:
+        st.error("Could not understand that ingredient.")
+    else:
+        key = (item, unit)
+        st.session_state.pantry[key] = st.session_state.pantry.get(key, 0) + amount
+        st.success(f"Added {pantry_input} to pantry!")
+
+st.subheader("Your Pantry")
+if st.session_state.pantry:
+    for (item, unit), amount in st.session_state.pantry.items():
+        if unit:
+            st.write(f"- {format_amount(amount, unit)} {item}")
+        else:
+            st.write(f"- {item} (x{amount})")
+else:
+    st.write("Your pantry is empty.")
+    
 # --- Shopping list display ---
 st.header("🛒 Shopping List")
 
