@@ -103,33 +103,26 @@ def singularize(item):
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
 
-    # Normalise all weird spaces
+    # ✅ Normalise all weird spaces
     ingredient = (
-        ingredient.replace("\u00A0", " ")
-                  .replace("\u2009", " ")
-                  .replace("\u202F", " ")
-                  .replace("\u200A", " ")
-                  .replace("\u200B", "")
-                  .replace("\uFEFF", "")
+        ingredient.replace("\u00A0", " ")  # non-breaking space
+                  .replace("\u2009", " ")  # thin space
+                  .replace("\u202F", " ")  # narrow no-break space
+                  .replace("\u200A", " ")  # hair space
+                  .replace("\u200B", "")   # zero-width space
+                  .replace("\uFEFF", "")   # zero-width no-break space
     )
 
+    # ✅ Extract the amount chunk (VERY permissive)
     amount_match = re.match(
-        r"^("
-        r"\d+\s+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞](?=\s)"  # mixed unicode fraction with space before unit
-        r"|\d+[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]"  # attached unicode fraction
-        r"|[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞](?=\s)"  # unicode fraction alone before unit
-        r"|\d+\s+\d+/\d+"  # mixed normal fraction
-        r"|\d+/\d+"  # normal fraction
-        r"|\d+\.\d+"  # decimal
-        r"|\d+"  # whole number
-        r")",
+        r"^([0-9\s\/\.\¼\½\¾\⅐\⅑\⅒\⅓\⅔\⅕\⅖\⅗\⅘\⅙\⅚\⅛\⅜\⅝\⅞]+)",
         ingredient
     )
 
     if not amount_match:
         return None, None, singularize(ingredient)
 
-    amount_text = amount_match.group(0)
+    amount_text = amount_match.group(1).strip()
     rest = ingredient[len(amount_text):].strip()
 
     # ✅ Extract unit
@@ -140,7 +133,7 @@ def parse_ingredient(ingredient):
     unit = unit_match.group(1).lower()
     item = rest[len(unit):].strip()
 
-    # ✅ Convert amount
+    # ✅ Convert amount using the robust fraction parser
     amount = fraction_to_float(amount_text)
     if amount is None:
         return None, None, singularize(item)
@@ -151,7 +144,6 @@ def parse_ingredient(ingredient):
         return amount * multiplier, norm_unit, singularize(item)
 
     return amount, unit, singularize(item)
-
 def combine_ingredients(ingredients):
     combined = {}
 
