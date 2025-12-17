@@ -49,28 +49,39 @@ def fraction_to_float(text):
         "⅛": 1/8, "⅜": 3/8, "⅝": 5/8, "⅞": 7/8,
     }
 
-    # Replace unicode fractions with numeric equivalents
+    # Replace unicode fractions with numeric equivalents (as decimals)
     for sym, val in unicode_fracs.items():
         text = text.replace(sym, f" {val} ")
 
     text = text.strip()
+    # Collapse multiple spaces
+    text = " ".join(text.split())
 
-    # Mixed number: "2 1/2"
-    if " " in text and "/" in text:
-        whole, frac = text.split(" ", 1)
+    # Try mixed number patterns first
+    parts = text.split()
+
+    # Case 1: "2 1/2" (whole + normal fraction)
+    if len(parts) == 2 and "/" in parts[1]:
         try:
-            return float(whole) + float(Fraction(frac))
+            return float(parts[0]) + float(Fraction(parts[1]))
         except:
-            return None
+            pass
 
-    # Simple fraction: "1/2"
+    # Case 2: "2 0.5" (whole + decimal from unicode fraction)
+    if len(parts) == 2 and "/" not in parts[1]:
+        try:
+            return float(parts[0]) + float(parts[1])
+        except:
+            pass
+
+    # Case 3: simple fraction like "1/2"
     if "/" in text:
         try:
             return float(Fraction(text))
         except:
             return None
 
-    # Decimal or whole number
+    # Case 4: plain decimal or integer ("0.5", "2", "0.3333")
     try:
         return float(text)
     except:
