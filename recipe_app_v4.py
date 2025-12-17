@@ -293,6 +293,15 @@ if "matches" in st.session_state and st.session_state.matches:
             can_make = False
             missing.append((req_item, req_unit, req_amount - pantry_amount))
 
+        if can_make:
+            st.success("✅ You can make this recipe with what you have!")
+        else:
+            st.warning("⚠️ You're missing some ingredients:")
+            for item, unit, amt in missing:
+                if unit:
+                    st.write(f"- {format_amount(amt, unit)} {item}")
+                else:
+                    st.write(f"- {item} (x{amt})")
 
 st.header("🏡 Smart Pantry")
 
@@ -310,15 +319,7 @@ if submitted_pantry and pantry_input.strip():
         st.session_state.pantry[key] = st.session_state.pantry.get(key, 0) + amount
         st.success(f"Added {pantry_input} to pantry!")
 
-if can_make:
-    st.success("✅ You can make this recipe with what you have!")
-else:
-    st.warning("⚠️ You're missing some ingredients:")
-    for item, unit, amt in missing:
-        if unit:
-            st.write(f"- {format_amount(amt, unit)} {item}")
-        else:
-            st.write(f"- {item} (x{amt})")
+
 
 if st.button(f"Cook {match['Recipe']}", key=f"cook_{match['Recipe']}"):
     for ing in recipe_row["Ingredients"]:
