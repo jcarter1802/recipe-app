@@ -308,9 +308,10 @@ if "matches" in st.session_state and st.session_state.matches:
         with st.expander("Show all ingredients"):
             ingredients_list = recipe_row["Ingredients"]
 
-            # Convert string → list if needed
             if isinstance(ingredients_list, str):
-                ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
+                ingredients_list = [
+                    i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")
+                ]
 
             for ing in ingredients_list:
                 st.write(f"- {ing}")
