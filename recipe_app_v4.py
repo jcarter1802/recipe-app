@@ -10,6 +10,12 @@ if "recipes" not in st.session_state:
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda x: [
+            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
+        ]
+    )
+
     st.session_state.recipes = df
     st.success("Recipes loaded!")
     st.write(df["Ingredients"].head())
