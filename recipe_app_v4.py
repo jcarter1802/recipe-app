@@ -258,6 +258,8 @@ def search_recipes(recipes, search_terms, threshold=0.5, min_percentage=0):
 
 # --- UI ---
 st.title("📖 Recipe Finder")
+st.write("DF HEAD:", st.session_state.recipes.head())
+st.write("DF TYPES:", st.session_state.recipes.dtypes)
 search_input = st.text_input("Enter ingredients (comma separated):")
 threshold = st.slider("Threshold (strictness)", 50, 100, 85)
 min_percentage = st.slider("Minimum overlap (% of search terms)", 0, 100, 50) / 100.0
