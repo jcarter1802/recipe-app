@@ -303,9 +303,10 @@ if "matches" in st.session_state and st.session_state.matches:
         with st.expander("Show all ingredients"):
             for ing in ingredients_list:
                 st.write(f"- {ing}")
+                st.write("RAW:", recipe_row["Ingredients"])
+                st.write("TYPE:", type(recipe_row["Ingredients"]))
 
-        st.write("RAW:", recipe_row["Ingredients"])
-        st.write("TYPE:", type(recipe_row["Ingredients"]))
+
 
         # --- SMART PANTRY COMPARISON ---
         missing = []
