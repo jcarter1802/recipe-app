@@ -269,7 +269,7 @@ if st.button("Search"):
             min_percentage=min_percentage
         )
     else:
-        st.error("Please enter at least one ingredient.")  # ✅ only shows if Search clicked with empty field
+        st.error("Please enter at least one ingredient.")
 
 # --- Step 2: Results display ---
 if "matches" in st.session_state and st.session_state.matches:
@@ -280,11 +280,12 @@ if "matches" in st.session_state and st.session_state.matches:
         ].iloc[0]
         servings = recipe_row.get("Servings", "N/A")
 
+        # Always convert ingredients to a clean list
         ingredients_list = recipe_row["Ingredients"]
-
-        # If it's a string, convert it to a list
         if isinstance(ingredients_list, str):
-            ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
+            ingredients_list = [
+                i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")
+            ]
 
         st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
         st.write(f"Servings: {servings}")
@@ -293,36 +294,19 @@ if "matches" in st.session_state and st.session_state.matches:
         for ing, score in match["Matched Ingredients"]:
             st.write(f"- {ing} (similarity score: {score})")
 
-        # ✅ Add to shopping list button
+        # --- Add to shopping list ---
         if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
-            # Always convert to a clean list before adding to shopping list
-            ingredients_list = recipe_row["Ingredients"]
-            if isinstance(ingredients_list, str):
-                ingredients_list = [
-                    i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")
-                ]
-
             st.session_state.shopping_list.extend(ingredients_list)
             st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
+        # --- Show all ingredients ---
         with st.expander("Show all ingredients"):
-            ingredients_list = recipe_row["Ingredients"]
-
-            if isinstance(ingredients_list, str):
-                ingredients_list = [
-                    i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")
-                ]
-
             for ing in ingredients_list:
                 st.write(f"- {ing}")
 
-        # ✅ SMART PANTRY COMPARISON
+        # --- SMART PANTRY COMPARISON ---
         missing = []
         can_make = True
-
-        ingredients_list = recipe_row["Ingredients"]
-        if isinstance(ingredients_list, str):
-            ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
 
         for ing in ingredients_list:
             req_amount, req_unit, req_item = parse_ingredient(ing)
@@ -347,12 +331,8 @@ if "matches" in st.session_state and st.session_state.matches:
                 else:
                     st.write(f"- {item} (x{amt})")
 
-        # ✅ Cook button
+        # --- Cook button ---
         if st.button(f"Cook {match['Recipe']}", key=f"cook_{match['Recipe']}"):
-            ingredients_list = recipe_row["Ingredients"]
-            if isinstance(ingredients_list, str):
-                ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
-
             for ing in ingredients_list:
                 amt, unit, item = parse_ingredient(ing)
                 key = (item, unit)
