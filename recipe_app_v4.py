@@ -230,6 +230,11 @@ def search_recipes(recipes, search_terms, threshold=0.5, min_percentage=0):
         recipe_name = row["Recipe Name"]
         recipe_ingredients = row["Ingredients"]
 
+        # ⭐ Convert string → list if needed
+        if isinstance(recipe_ingredients, str):
+            recipe_ingredients = [
+                i.strip() for i in clean_ingredient_text(recipe_ingredients).split("\n")
+            ]
         overlap = []
         for s in search_ingredients:
             for r in recipe_ingredients:
