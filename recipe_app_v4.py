@@ -301,11 +301,23 @@ if "matches" in st.session_state and st.session_state.matches:
 
         # --- Show all ingredients ---
         with st.expander("Show all ingredients"):
+
+            # Always convert to a clean list FIRST
+            ingredients_list = recipe_row["Ingredients"]
+
+            if isinstance(ingredients_list, str):
+                ingredients_list = [
+                    i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")
+                ]
+
+            # Debug
+            st.write("RAW:", recipe_row["Ingredients"])
+            st.write("TYPE:", type(recipe_row["Ingredients"]))
+            st.write("CLEANED LIST:", ingredients_list)
+
+            # Now loop over the CLEAN list
             for ing in ingredients_list:
                 st.write(f"- {ing}")
-                st.write("RAW:", recipe_row["Ingredients"])
-                st.write("TYPE:", type(recipe_row["Ingredients"]))
-
 
 
         # --- SMART PANTRY COMPARISON ---
