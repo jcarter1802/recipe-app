@@ -12,8 +12,7 @@ if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
     st.session_state.recipes = df
     st.success("Recipes loaded!")
-
-st.write(df["Ingredients"].head())
+    st.write(df["Ingredients"].head())
 
 # ✅ Ensure shopping list exists
 if "shopping_list" not in st.session_state:
