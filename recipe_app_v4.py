@@ -1,9 +1,6 @@
 import pandas as pd
 from rapidfuzz import fuzz
 import streamlit as st
-import re
-from fractions import Fraction
-
 
 # Ensure recipes exist in session state
 uploaded_file = st.file_uploader("Upload your recipe spreadsheet", type=["xlsx"])
@@ -121,6 +118,17 @@ def singularize(item):
         return item[:-1]
 
     return item
+
+def clean_ingredient_text(text):
+    if not isinstance(text, str):
+        return ""
+    return (
+        text.replace("\r", "\n")        # normalize Windows line breaks
+            .replace("\u2028", "\n")   # remove unicode line separators
+            .replace("\xa0", " ")      # replace non-breaking spaces
+            .replace(",", "\n")        # split comma-separated ingredients into lines
+            .strip()
+    )
 
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
