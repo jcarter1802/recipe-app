@@ -298,24 +298,26 @@ if "matches" in st.session_state and st.session_state.matches:
             st.session_state.shopping_list.extend(ingredients_list)
             st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
-        # --- Show all ingredients ---
         with st.expander("Show all ingredients"):
 
-            # Always convert to a clean list FIRST
-            ingredients_list = recipe_row["Ingredients"]
+            # Force conversion INSIDE the expander
+            raw_ingredients = recipe_row["Ingredients"]
 
-            if isinstance(ingredients_list, str):
-                ingredients_list = [
-                    i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")
+            st.write("RAW:", raw_ingredients)
+            st.write("TYPE:", type(raw_ingredients))
+
+            # Convert string → list
+            if isinstance(raw_ingredients, str):
+                cleaned_list = [
+                    i.strip() for i in clean_ingredient_text(raw_ingredients).split("\n")
                 ]
+            else:
+                cleaned_list = raw_ingredients
 
-            # Debug
-            st.write("RAW:", recipe_row["Ingredients"])
-            st.write("TYPE:", type(recipe_row["Ingredients"]))
-            st.write("CLEANED LIST:", ingredients_list)
+            st.write("CLEANED LIST:", cleaned_list)
 
-            # Now loop over the CLEAN list
-            for ing in ingredients_list:
+            # Loop over the ACTUAL list
+            for ing in cleaned_list:
                 st.write(f"- {ing}")
 
 
