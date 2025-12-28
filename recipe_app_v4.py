@@ -4,11 +4,17 @@ import streamlit as st
 import re
 from fractions import Fraction
 
-# ✅ Ensure recipes DataFrame exists
+
+# Ensure recipes exist in session state
 if "recipes" not in st.session_state:
-    st.session_state.recipes = pd.DataFrame(
-        columns=["Recipe Name", "Ingredients", "Instructions"]
-    )
+    st.session_state.recipes = pd.DataFrame()
+
+uploaded_file = st.file_uploader("Upload your recipe spreadsheet", type=["xlsx"])
+
+if uploaded_file is not None:
+    df = pd.read_excel("Copy of cooking.xlsx")
+    st.session_state.recipes = df
+    st.success("Recipes loaded!")
 
 # ✅ Ensure shopping list exists
 if "shopping_list" not in st.session_state:
