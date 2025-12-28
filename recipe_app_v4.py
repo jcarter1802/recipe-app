@@ -6,13 +6,13 @@ from fractions import Fraction
 
 
 # Ensure recipes exist in session state
+uploaded_file = st.file_uploader("Upload your recipe spreadsheet", type=["xlsx"])
+
 if "recipes" not in st.session_state:
     st.session_state.recipes = pd.DataFrame()
 
-uploaded_file = st.file_uploader("Upload your recipe spreadsheet", type=["xlsx"])
-
 if uploaded_file is not None:
-    df = pd.read_excel("Copy of cooking.xlsx")
+    df = pd.read_excel(uploaded_file)
     st.session_state.recipes = df
     st.success("Recipes loaded!")
 
