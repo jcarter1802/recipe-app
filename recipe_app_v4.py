@@ -295,7 +295,14 @@ if "matches" in st.session_state and st.session_state.matches:
 
         # ✅ Add to shopping list button
         if st.button(f"Add {match['Recipe']} to shopping list", key=f"add_{match['Recipe']}"):
-            st.session_state.shopping_list.extend(recipe_row["Ingredients"])
+            # Always convert to a clean list before adding to shopping list
+            ingredients_list = recipe_row["Ingredients"]
+            if isinstance(ingredients_list, str):
+                ingredients_list = [
+                    i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")
+                ]
+
+            st.session_state.shopping_list.extend(ingredients_list)
             st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
         with st.expander("Show all ingredients"):
