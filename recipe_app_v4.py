@@ -22,6 +22,17 @@ if "shopping_list" not in st.session_state:
 if "pantry" not in st.session_state:
     st.session_state.pantry = {}
 
+def clean_ingredient_text(text):
+    if not isinstance(text, str):
+        return ""
+    return (
+        text.replace("\r", "\n")        # normalize Windows line breaks
+            .replace("\u2028", "\n")   # remove unicode line separators
+            .replace("\xa0", " ")      # replace non-breaking spaces
+            .replace(",", "\n")        # split comma-separated ingredients into lines
+            .strip()
+    )
+
 UNIT_MAP = {
     "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
     "kg": ("g", 1000), "kilogram": ("g", 1000), "kilograms": ("g", 1000),
@@ -119,16 +130,7 @@ def singularize(item):
 
     return item
 
-def clean_ingredient_text(text):
-    if not isinstance(text, str):
-        return ""
-    return (
-        text.replace("\r", "\n")        # normalize Windows line breaks
-            .replace("\u2028", "\n")   # remove unicode line separators
-            .replace("\xa0", " ")      # replace non-breaking spaces
-            .replace(",", "\n")        # split comma-separated ingredients into lines
-            .strip()
-    )
+
 
 def parse_ingredient(ingredient):
     ingredient = ingredient.strip().lower()
@@ -278,6 +280,12 @@ if "matches" in st.session_state and st.session_state.matches:
         ].iloc[0]
         servings = recipe_row.get("Servings", "N/A")
 
+        ingredients_list = recipe_row["Ingredients"]
+
+        # If it's a string, convert it to a list
+        if isinstance(ingredients_list, str):
+            ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
+
         st.subheader(f"{match['Recipe']} → {match['Match %']}% overlap")
         st.write(f"Servings: {servings}")
         st.write(f"Matched {match['Match Count']} terms")
@@ -291,14 +299,24 @@ if "matches" in st.session_state and st.session_state.matches:
             st.success(f"Added all ingredients from {match['Recipe']} to shopping list!")
 
         with st.expander("Show all ingredients"):
-            for ing in recipe_row["Ingredients"]:
+            ingredients_list = recipe_row["Ingredients"]
+
+            # Convert string → list if needed
+            if isinstance(ingredients_list, str):
+                ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
+
+            for ing in ingredients_list:
                 st.write(f"- {ing}")
 
         # ✅ SMART PANTRY COMPARISON
         missing = []
         can_make = True
 
-        for ing in recipe_row["Ingredients"]:
+        ingredients_list = recipe_row["Ingredients"]
+        if isinstance(ingredients_list, str):
+            ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
+
+        for ing in ingredients_list:
             req_amount, req_unit, req_item = parse_ingredient(ing)
             key = (req_item, req_unit)
 
@@ -323,7 +341,11 @@ if "matches" in st.session_state and st.session_state.matches:
 
         # ✅ Cook button
         if st.button(f"Cook {match['Recipe']}", key=f"cook_{match['Recipe']}"):
-            for ing in recipe_row["Ingredients"]:
+            ingredients_list = recipe_row["Ingredients"]
+            if isinstance(ingredients_list, str):
+                ingredients_list = [i.strip() for i in clean_ingredient_text(ingredients_list).split("\n")]
+
+            for ing in ingredients_list:
                 amt, unit, item = parse_ingredient(ing)
                 key = (item, unit)
 
