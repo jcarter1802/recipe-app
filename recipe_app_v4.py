@@ -16,6 +16,8 @@ if uploaded_file is not None:
     st.session_state.recipes = df
     st.success("Recipes loaded!")
 
+st.write(df["Ingredients"].head())
+
 # ✅ Ensure shopping list exists
 if "shopping_list" not in st.session_state:
     st.session_state.shopping_list = []
