@@ -21,6 +21,8 @@ def compare_recipe_to_pantry(ingredients_text):
     short = []
     matched = []
 
+    ingredients_text = clean_ingredient_text(ingredients_text)
+
     for line in ingredients_text.split("\n"):
         amount, unit, item = parse_ingredient(line)
 

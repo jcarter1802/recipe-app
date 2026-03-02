@@ -27,6 +27,76 @@ if "shopping_list" not in st.session_state:
 if "pantry" not in st.session_state:
     st.session_state.pantry = {}
 
+def normalize_ingredient_line(line):
+    """Normalize a single ingredient line for consistency."""
+
+    # Lowercase
+    line = line.lower().strip()
+
+    # Replace unicode fractions
+    unicode_map = {
+        "½": "1/2",
+        "⅓": "1/3",
+        "⅔": "2/3",
+        "¼": "1/4",
+        "¾": "3/4",
+        "⅛": "1/8",
+    }
+    for uni, ascii_val in unicode_map.items():
+        line = line.replace(uni, ascii_val)
+
+    # Normalize units
+    unit_map = {
+        "tsp": "teaspoon",
+        "tsps": "teaspoon",
+        "tbsp": "tablespoon",
+        "tbsps": "tablespoon",
+        "g": "gram",
+        "kg": "kilogram",
+        "ml": "milliliter",
+        "l": "liter",
+        "cup": "cup",
+        "cups": "cup",
+    }
+    for short, full in unit_map.items():
+        line = line.replace(f" {short} ", f" {full} ")
+
+    # Normalize plurals (simple version)
+    plural_map = {
+        "eggs": "egg",
+        "bananas": "banana",
+        "tomatoes": "tomato",
+        "potatoes": "potato",
+        "berries": "berry",
+        "cloves": "clove",
+    }
+    for plural, singular in plural_map.items():
+        if line.endswith(plural):
+            line = line.replace(plural, singular)
+
+    # Remove trailing punctuation
+    line = line.rstrip(",. ")
+
+    return line
+
+if uploaded_file is not None:
+    df = pd.read_excel(uploaded_file)
+
+    # Convert string → list
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda x: [
+            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
+        ]
+    )
+
+    # ⭐ Normalize each ingredient line
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda lst: [normalize_ingredient_line(i) for i in lst]
+    )
+
+    st.session_state.recipes = df
+    st.success("Recipes loaded and normalized!")
+
 def clean_ingredient_text(text):
     if not isinstance(text, str):
         return ""
@@ -49,6 +119,7 @@ UNIT_MAP = {
     "tsp": ("tsp", 1), "teaspoon": ("tsp", 1), "teaspoons": ("tsp", 1),
     "cup": ("cup", 1), "cups": ("cup", 1)
 }
+
 
 from fractions import Fraction
 import re
