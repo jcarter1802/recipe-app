@@ -153,11 +153,7 @@ else:
                 st.success("Pantry updated for this recipe.")
 
         # Expand to show full ingredient list (cleaned)
-        # --- debug: inspect the raw ingredients cell for this recipe row ---
-        ingredients_cell = row.get("Ingredients", None)
-        st.write("DEBUG repr(ingredients_cell):", repr(ingredients_cell))
-        st.write("DEBUG type:", type(ingredients_cell))
-
+      
         if isinstance(ingredients_cell, list):
             for i, el in enumerate(ingredients_cell):
                 st.write(f"DEBUG list item {i} repr:", repr(el), "type:", type(el))
