@@ -2,23 +2,6 @@ import pandas as pd
 from rapidfuzz import fuzz
 import streamlit as st
 
-# Ensure recipes exist in session state
-uploaded_file = st.file_uploader("Upload your recipe spreadsheet", type=["xlsx"])
-
-if "recipes" not in st.session_state:
-    st.session_state.recipes = pd.DataFrame()
-
-if uploaded_file is not None:
-    df = pd.read_excel(uploaded_file)
-    df["Ingredients"] = df["Ingredients"].apply(
-        lambda x: [
-            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
-        ]
-    )
-
-    st.session_state.recipes = df
-    st.success("Recipes loaded!")
-    st.write(df["Ingredients"].head())
 
 # ✅ Ensure shopping list exists
 if "shopping_list" not in st.session_state:
@@ -78,24 +61,6 @@ def normalize_ingredient_line(line):
     line = line.rstrip(",. ")
 
     return line
-
-if uploaded_file is not None:
-    df = pd.read_excel(uploaded_file)
-
-    # Convert string → list
-    df["Ingredients"] = df["Ingredients"].apply(
-        lambda x: [
-            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
-        ]
-    )
-
-    # ⭐ Normalize each ingredient line
-    df["Ingredients"] = df["Ingredients"].apply(
-        lambda lst: [normalize_ingredient_line(i) for i in lst]
-    )
-
-    st.session_state.recipes = df
-    st.success("Recipes loaded and normalized!")
 
 def clean_ingredient_text(text):
     if not isinstance(text, str):
@@ -350,6 +315,24 @@ def search_recipes(recipes, search_terms, threshold=0.5, min_percentage=0):
 
     results = sorted(results, key=lambda x: x["Match Count"], reverse=True)
     return results
+
+if uploaded_file is not None:
+    df = pd.read_excel(uploaded_file)
+
+    # Convert string → list
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda x: [
+            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
+        ]
+    )
+
+    # ⭐ Normalize each ingredient line
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda lst: [normalize_ingredient_line(i) for i in lst]
+    )
+
+    st.session_state.recipes = df
+    st.success("Recipes loaded and normalized!")
 
 # --- UI ---
 st.title("📖 Recipe Finder")
