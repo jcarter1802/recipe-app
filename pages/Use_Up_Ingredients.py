@@ -1,205 +1,180 @@
+# pages/Use_Up_Ingredients.py
 import streamlit as st
-from recipe_app_v4_2 import parse_ingredient, format_amount
 import pandas as pd
 
-st.title("🍳 Use Up Ingredients")
+# Import shared helpers. Ensure these exist in utils.py and are on PYTHONPATH.
+# Required helpers: normalized_raw_lines, parse_ingredient, singularize
+from utils import normalized_raw_lines, parse_ingredient, singularize
 
-# Ensure pantry exists
+# Ensure session state keys exist
+if "recipes" not in st.session_state:
+    st.session_state.recipes = pd.DataFrame()
+
 if "pantry" not in st.session_state:
     st.session_state.pantry = {}
 
-# Ensure recipes exist
-if "recipes" not in st.session_state or st.session_state.recipes.empty:
-    st.warning("No recipes available yet.")
-    st.stop()
+st.title("🧾 Use Up Ingredients")
 
-recipes_df = st.session_state.recipes
+# Helper: canonical pantry key
+def pantry_key(item, unit):
+    return (singularize(item or ""), unit)
 
-def clean_ingredient_text(text):
-    if not isinstance(text, str):
-        return ""
-    return (
-        text.replace("\r", "\n")        # normalize Windows line breaks
-            .replace("\u2028", "\n")   # remove unicode line separators
-            .replace("\xa0", " ")      # replace non-breaking spaces
-            .replace(",", "\n")        # split comma-separated ingredients into lines
-            .strip()
-    )
-
-UNIT_MAP = {
-    "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
-    "kg": ("g", 1000), "kilogram": ("g", 1000), "kilograms": ("g", 1000),
-
-    "ml": ("ml", 1), "millilitre": ("ml", 1), "milliliter": ("ml", 1),
-    "l": ("ml", 1000), "litre": ("ml", 1000), "liter": ("ml", 1000),
-
-    "tbsp": ("tbsp", 1), "tablespoon": ("tbsp", 1), "tablespoons": ("tbsp", 1),
-    "tsp": ("tsp", 1), "teaspoon": ("tsp", 1), "teaspoons": ("tsp", 1),
-    "cup": ("cup", 1), "cups": ("cup", 1)
-}
-
-
-from fractions import Fraction
-import re
-
-def fraction_to_float(text):
-    # Clean weird spaces
-    text = (
-        text.replace("\u00A0", " ")
-            .replace("\u2009", " ")
-            .replace("\u202F", " ")
-            .replace("\u200A", " ")
-            .replace("\u200B", "")
-            .replace("\uFEFF", "")
-    )
-
-    unicode_fracs = {
-        "¼": 1/4, "½": 1/2, "¾": 3/4,
-        "⅐": 1/7, "⅑": 1/9, "⅒": 1/10,
-        "⅓": 1/3, "⅔": 2/3,
-        "⅕": 1/5, "⅖": 2/5, "⅗": 3/5, "⅘": 4/5,
-        "⅙": 1/6, "⅚": 5/6,
-        "⅛": 1/8, "⅜": 3/8, "⅝": 5/8, "⅞": 7/8,
-    }
-
-    # Replace unicode fractions with numeric equivalents (as decimals)
-    for sym, val in unicode_fracs.items():
-        text = text.replace(sym, f" {val} ")
-
-    text = text.strip()
-    # Collapse multiple spaces
-    text = " ".join(text.split())
-
-    # Try mixed number patterns first
-    parts = text.split()
-
-    # Case 1: "2 1/2" (whole + normal fraction)
-    if len(parts) == 2 and "/" in parts[1]:
-        try:
-            return float(parts[0]) + float(Fraction(parts[1]))
-        except:
-            pass
-
-    # Case 2: "2 0.5" (whole + decimal from unicode fraction)
-    if len(parts) == 2 and "/" not in parts[1]:
-        try:
-            return float(parts[0]) + float(parts[1])
-        except:
-            pass
-
-    # Case 3: simple fraction like "1/2"
-    if "/" in text:
-        try:
-            return float(Fraction(text))
-        except:
-            return None
-
-    # Case 4: plain decimal or integer ("0.5", "2", "0.3333")
-    try:
-        return float(text)
-    except:
-        return None
-
-def singularize(item):
-    item = item.strip().lower()
-
-    irregular = {
-        "tomatoes": "tomato", "potatoes": "potato",
-        "leaves": "leaf", "knives": "knife",
-        "loaves": "loaf", "berries": "berry",
-        "cloves": "clove",
-    }
-
-    if item in irregular:
-        return irregular[item]
-
-    if item.endswith("ies"):
-        return item[:-3] + "y"
-
-    if item.endswith("es") and not item.endswith(("ches", "shes", "xes", "sses")):
-        return item[:-2]
-
-    if item.endswith("s"):
-        return item[:-1]
-
-    return item
-
-def safe_clean(text):
-    try:
-        return clean_ingredient_text(text)
-    except NameError:
-        # fallback: minimal cleaning so the page doesn't crash
-        if not isinstance(text, str):
-            return ""
-        return text.replace("\r", "\n").replace(",", "\n").strip()
-
-def compare_recipe_to_pantry(ingredients_text):
-    ingredients_text = safe_clean(ingredients_text)
-    # rest of function...
-
-def compare_recipe_to_pantry(ingredients_text):
-    """Return match stats for a recipe."""
+# Compare a single recipe's ingredients to the pantry.
+# Accepts ingredients_cell which may be: list[dict], list[str], or str.
+# Returns: (missing_list, short_list, matched_count)
+def compare_recipe_to_pantry(ingredients_cell):
     missing = []
     short = []
-    matched = []
+    matched = 0
 
-    ingredients_text = clean_ingredient_text(ingredients_text)
+    # normalized_raw_lines returns list[str] (clean raw lines) or list of dicts if you prefer;
+    # we handle both dict and string forms below.
+    raw_lines = normalized_raw_lines(ingredients_cell)
 
-    for line in ingredients_text.split("\n"):
-        amount, unit, item = parse_ingredient(line)
+    for raw in raw_lines:
+        # If the recipe stores structured dicts, normalized_raw_lines may return raw strings.
+        # Try to parse; if parse fails, treat as countable item with no quantity.
+        try:
+            qty, unit, item = parse_ingredient(raw)
+        except Exception:
+            qty, unit, item = None, None, raw.strip().lower()
 
-        if item is None:
-            continue
+        # canonicalize item
+        item = singularize(item or "")
 
-        key = (item, unit)
-        pantry_amount = st.session_state.pantry.get(key, 0)
+        key = pantry_key(item, unit)
+        have = st.session_state.pantry.get(key, 0)
 
-        if pantry_amount == 0:
-            missing.append(line)
-        elif pantry_amount < amount:
-            short.append(f"{line} (short by {format_amount(amount - pantry_amount, unit)})")
+        # If no numeric quantity, treat as countable: require at least 1
+        if qty is None:
+            if have >= 1:
+                matched += 1
+            else:
+                missing.append((item, unit, 1))
         else:
-            matched.append(line)
+            if have >= qty:
+                matched += 1
+            else:
+                short_amount = max(0, qty - have)
+                short.append((item, unit, short_amount))
 
     return missing, short, matched
 
-
-perfect_matches = []
-almost_matches = []
-poor_matches = []
-
-for idx, row in recipes_df.iterrows():
-    missing, short, matched = compare_recipe_to_pantry(row["Ingredients"])
-
-    score = len(missing) + len(short)
-
-    if score == 0:
-        perfect_matches.append((row["Recipe Name"], missing, short, matched))
-    elif score <= 2:
-        almost_matches.append((row["Recipe Name"], missing, short, matched))
-    else:
-        poor_matches.append((row["Recipe Name"], missing, short, matched))
-
-st.subheader("✅ Recipes You Can Make Right Now")
-if perfect_matches:
-    for name, missing, short, matched in perfect_matches:
-        st.markdown(f"### {name}")
-        st.write("All ingredients available!")
+# UI: list recipes and show match summary
+if st.session_state.recipes is None or st.session_state.recipes.empty:
+    st.info("No recipes loaded. Upload recipes on the main page first.")
 else:
-    st.write("No perfect matches yet.")
+    df = st.session_state.recipes
 
-st.subheader("🟡 Almost There (1–2 missing)")
-if almost_matches:
-    for name, missing, short, matched in almost_matches:
-        st.markdown(f"### {name}")
-        if missing:
-            st.write("Missing:", missing)
-        if short:
-            st.write("Short:", short)
-else:
-    st.write("No almost matches yet.")
+    # Show a compact summary table (recipe name and ingredient count)
+    try:
+        preview = []
+        for _, row in df.iterrows():
+            name = row.get("Recipe Name", "Unnamed")
+            ingredients_cell = row.get("Ingredients", [])
+            # Count non-empty parsed lines
+            lines = normalized_raw_lines(ingredients_cell)
+            preview.append({"Recipe Name": name, "Ingredient Count": len(lines)})
+        st.dataframe(pd.DataFrame(preview).head(20))
+    except Exception:
+        # Fallback: show recipe names only
+        st.write("Recipes:")
+        for _, r in df.iterrows():
+            st.write("-", r.get("Recipe Name", "Unnamed"))
 
-st.subheader("🔍 Other Recipes")
-for name, missing, short, matched in poor_matches:
-    st.markdown(f"### {name}")
-    st.write(f"Missing {len(missing)} ingredients")
+    st.markdown("---")
+
+    # Iterate recipes and show match details
+    for idx, row in df.iterrows():
+        recipe_name = row.get("Recipe Name", f"Recipe {idx}")
+        ingredients_cell = row.get("Ingredients", [])
+
+        missing, short, matched = compare_recipe_to_pantry(ingredients_cell)
+        total_ingredients = len(normalized_raw_lines(ingredients_cell))
+
+        # Header with match summary
+        pct = (matched / total_ingredients * 100) if total_ingredients else 0
+        st.subheader(f"{recipe_name} — {matched}/{total_ingredients} ingredients available ({pct:.0f}%)")
+
+        # Show missing and short lists
+        if not missing and not short:
+            st.success("You have everything listed (or recipe has no parseable ingredients).")
+        else:
+            if missing:
+                st.warning("Missing items (not in pantry):")
+                for item, unit, amt in missing:
+                    if unit:
+                        st.write(f"- {amt} {unit} {item}")
+                    else:
+                        st.write(f"- {item} (x{amt})")
+            if short:
+                st.info("Short on quantity (need more):")
+                for item, unit, amt in short:
+                    if unit:
+                        st.write(f"- {amt} {unit} {item}")
+                    else:
+                        st.write(f"- {item} (x{amt})")
+
+        # Buttons: add missing to shopping list, or mark as cookable
+        col1, col2 = st.columns(2)
+        with col1:
+            key_add = f"add_shop_{idx}"
+            if st.button("Add missing to shopping list", key=key_add):
+                # Build structured missing items and append to shopping_list
+                if "shopping_list" not in st.session_state:
+                    st.session_state.shopping_list = []
+                for item, unit, amt in missing + short:
+                    # store as simple string or structured dict depending on your app
+                    st.session_state.shopping_list.append({
+                        "raw": f"{amt} {unit or ''} {item}".strip(),
+                        "quantity": amt,
+                        "unit": unit,
+                        "ingredient": item
+                    })
+                st.success("Missing items added to shopping list.")
+        with col2:
+            key_cook = f"cook_recipe_{idx}"
+            if st.button("Mark as cookable (deduct pantry)", key=key_cook):
+                # Deduct required quantities from pantry where possible
+                for raw in normalized_raw_lines(ingredients_cell):
+                    try:
+                        qty, unit, item = parse_ingredient(raw)
+                    except Exception:
+                        qty, unit, item = None, None, raw.strip().lower()
+                    item = singularize(item or "")
+                    k = pantry_key(item, unit)
+                    if qty is None:
+                        # consume one if available
+                        if st.session_state.pantry.get(k, 0) >= 1:
+                            st.session_state.pantry[k] = st.session_state.pantry.get(k, 0) - 1
+                    else:
+                        if k in st.session_state.pantry:
+                            st.session_state.pantry[k] = max(0, st.session_state.pantry.get(k, 0) - qty)
+                st.success("Pantry updated for this recipe.")
+
+        # Expand to show full ingredient list (cleaned)
+        # --- debug: inspect the raw ingredients cell for this recipe row ---
+        ingredients_cell = row.get("Ingredients", None)
+        st.write("DEBUG repr(ingredients_cell):", repr(ingredients_cell))
+        st.write("DEBUG type:", type(ingredients_cell))
+
+        if isinstance(ingredients_cell, list):
+            for i, el in enumerate(ingredients_cell):
+                st.write(f"DEBUG list item {i} repr:", repr(el), "type:", type(el))
+
+        # --- produce a cleaned list for widgets and display (remove empty/None entries) ---
+        cleaned_list = normalized_raw_lines(ingredients_cell)
+        cleaned_list = [o for o in cleaned_list if isinstance(o, str) and o.strip()]
+
+        # fallback so widgets never receive an empty string
+        if not cleaned_list:
+            cleaned_list = []
+        with st.expander("Show ingredients"):
+            cleaned_list = normalized_raw_lines(ingredients_cell)
+            if not cleaned_list:
+                st.write("No ingredients listed for this recipe.")
+            else:
+                for ing in cleaned_list:
+                    st.write(f"- {ing}")
+
+        st.markdown("---")
