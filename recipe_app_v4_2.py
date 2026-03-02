@@ -1,6 +1,126 @@
 import pandas as pd
 from rapidfuzz import fuzz
 import streamlit as st
+
+# Ensure recipes exist in session state
+uploaded_file = st.file_uploader("Upload your recipe spreadsheet", type=["xlsx"])
+
+if "recipes" not in st.session_state:
+    st.session_state.recipes = pd.DataFrame()
+
+if uploaded_file is not None:
+    df = pd.read_excel(uploaded_file)
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda x: [
+            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
+        ]
+    )
+
+    st.session_state.recipes = df
+    st.success("Recipes loaded!")
+    st.write(df["Ingredients"].head())
+
+# ✅ Ensure shopping list exists
+if "shopping_list" not in st.session_state:
+    st.session_state.shopping_list = []
+
+if "pantry" not in st.session_state:
+    st.session_state.pantry = {}
+
+def normalize_ingredient_line(line):
+    """Normalize a single ingredient line for consistency."""
+
+    # Lowercase
+    line = line.lower().strip()
+
+    # Replace unicode fractions
+    unicode_map = {
+        "½": "1/2",
+        "⅓": "1/3",
+        "⅔": "2/3",
+        "¼": "1/4",
+        "¾": "3/4",
+        "⅛": "1/8",
+    }
+    for uni, ascii_val in unicode_map.items():
+        line = line.replace(uni, ascii_val)
+
+    # Normalize units
+    unit_map = {
+        "tsp": "teaspoon",
+        "tsps": "teaspoon",
+        "tbsp": "tablespoon",
+        "tbsps": "tablespoon",
+        "g": "gram",
+        "kg": "kilogram",
+        "ml": "milliliter",
+        "l": "liter",
+        "cup": "cup",
+        "cups": "cup",
+    }
+    for short, full in unit_map.items():
+        line = line.replace(f" {short} ", f" {full} ")
+
+    # Normalize plurals (simple version)
+    plural_map = {
+        "eggs": "egg",
+        "bananas": "banana",
+        "tomatoes": "tomato",
+        "potatoes": "potato",
+        "berries": "berry",
+        "cloves": "clove",
+    }
+    for plural, singular in plural_map.items():
+        if line.endswith(plural):
+            line = line.replace(plural, singular)
+
+    # Remove trailing punctuation
+    line = line.rstrip(",. ")
+
+    return line
+
+if uploaded_file is not None:
+    df = pd.read_excel(uploaded_file)
+
+    # Convert string → list
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda x: [
+            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
+        ]
+    )
+
+    # ⭐ Normalize each ingredient line
+    df["Ingredients"] = df["Ingredients"].apply(
+        lambda lst: [normalize_ingredient_line(i) for i in lst]
+    )
+
+    st.session_state.recipes = df
+    st.success("Recipes loaded and normalized!")
+
+def clean_ingredient_text(text):
+    if not isinstance(text, str):
+        return ""
+    return (
+        text.replace("\r", "\n")        # normalize Windows line breaks
+            .replace("\u2028", "\n")   # remove unicode line separators
+            .replace("\xa0", " ")      # replace non-breaking spaces
+            .replace(",", "\n")        # split comma-separated ingredients into lines
+            .strip()
+    )
+
+UNIT_MAP = {
+    "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
+    "kg": ("g", 1000), "kilogram": ("g", 1000), "kilograms": ("g", 1000),
+
+    "ml": ("ml", 1), "millilitre": ("ml", 1), "milliliter": ("ml", 1),
+    "l": ("ml", 1000), "litre": ("ml", 1000), "liter": ("ml", 1000),
+
+    "tbsp": ("tbsp", 1), "tablespoon": ("tbsp", 1), "tablespoons": ("tbsp", 1),
+    "tsp": ("tsp", 1), "teaspoon": ("tsp", 1), "teaspoons": ("tsp", 1),
+    "cup": ("cup", 1), "cups": ("cup", 1)
+}
+
+
 from fractions import Fraction
 import re
 
@@ -173,109 +293,7 @@ if uploaded_file is not None:
     st.session_state.recipes = df
     st.success("Recipes loaded!")
     st.write(df["Ingredients"].head())
-
-# ✅ Ensure shopping list exists
-if "shopping_list" not in st.session_state:
-    st.session_state.shopping_list = []
-
-if "pantry" not in st.session_state:
-    st.session_state.pantry = {}
-
-def normalize_ingredient_line(line):
-    """Normalize a single ingredient line for consistency."""
-
-    # Lowercase
-    line = line.lower().strip()
-
-    # Replace unicode fractions
-    unicode_map = {
-        "½": "1/2",
-        "⅓": "1/3",
-        "⅔": "2/3",
-        "¼": "1/4",
-        "¾": "3/4",
-        "⅛": "1/8",
-    }
-    for uni, ascii_val in unicode_map.items():
-        line = line.replace(uni, ascii_val)
-
-    # Normalize units
-    unit_map = {
-        "tsp": "teaspoon",
-        "tsps": "teaspoon",
-        "tbsp": "tablespoon",
-        "tbsps": "tablespoon",
-        "g": "gram",
-        "kg": "kilogram",
-        "ml": "milliliter",
-        "l": "liter",
-        "cup": "cup",
-        "cups": "cup",
-    }
-    for short, full in unit_map.items():
-        line = line.replace(f" {short} ", f" {full} ")
-
-    # Normalize plurals (simple version)
-    plural_map = {
-        "eggs": "egg",
-        "bananas": "banana",
-        "tomatoes": "tomato",
-        "potatoes": "potato",
-        "berries": "berry",
-        "cloves": "clove",
-    }
-    for plural, singular in plural_map.items():
-        if line.endswith(plural):
-            line = line.replace(plural, singular)
-
-    # Remove trailing punctuation
-    line = line.rstrip(",. ")
-
-    return line
-
-if uploaded_file is not None:
-    df = pd.read_excel(uploaded_file)
-
-    # Convert string → list
-    df["Ingredients"] = df["Ingredients"].apply(
-        lambda x: [
-            i.strip() for i in clean_ingredient_text(str(x)).split("\n")
-        ]
-    )
-
-    # ⭐ Normalize each ingredient line
-    df["Ingredients"] = df["Ingredients"].apply(
-        lambda lst: [normalize_ingredient_line(i) for i in lst]
-    )
-
-    st.session_state.recipes = df
-    st.success("Recipes loaded and normalized!")
-
-def clean_ingredient_text(text):
-    if not isinstance(text, str):
-        return ""
-    return (
-        text.replace("\r", "\n")        # normalize Windows line breaks
-            .replace("\u2028", "\n")   # remove unicode line separators
-            .replace("\xa0", " ")      # replace non-breaking spaces
-            .replace(",", "\n")        # split comma-separated ingredients into lines
-            .strip()
-    )
-
-UNIT_MAP = {
-    "g": ("g", 1), "gram": ("g", 1), "grams": ("g", 1),
-    "kg": ("g", 1000), "kilogram": ("g", 1000), "kilograms": ("g", 1000),
-
-    "ml": ("ml", 1), "millilitre": ("ml", 1), "milliliter": ("ml", 1),
-    "l": ("ml", 1000), "litre": ("ml", 1000), "liter": ("ml", 1000),
-
-    "tbsp": ("tbsp", 1), "tablespoon": ("tbsp", 1), "tablespoons": ("tbsp", 1),
-    "tsp": ("tsp", 1), "teaspoon": ("tsp", 1), "teaspoons": ("tsp", 1),
-    "cup": ("cup", 1), "cups": ("cup", 1)
-}
-
-
-
+    
 # --- Manual recipe entry form ---
 with st.form("add_recipe"):
     recipe_name = st.text_input("Recipe Name")
