@@ -87,6 +87,12 @@ for idx, row in df.iterrows():
     recipe_name = row.get("Recipe Name", f"Recipe {idx}")
     ingredients_cell = row.get("Ingredients", [])
 
+    st.write("DEBUG PARSED INGREDIENTS:")
+    for raw in normalized_raw_lines(ingredients_cell):
+        qty, unit, item = parse_ingredient(raw)
+        st.write(f"RAW: {raw} → qty={qty}, unit={unit}, item={item}")
+
+
     missing, short, matched = compare_recipe_to_pantry(ingredients_cell)
     total = len(normalized_raw_lines(ingredients_cell))
     pct = (matched / total * 100) if total else 0
@@ -106,6 +112,7 @@ for idx, row in df.iterrows():
             st.info("Short on quantity:")
             for item, unit, amt in short:
                 st.write(f"- Need {amt} more {unit or ''} {item}".strip())
+
 
     # Buttons
     col1, col2 = st.columns(2)
