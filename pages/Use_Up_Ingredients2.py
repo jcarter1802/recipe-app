@@ -29,6 +29,18 @@ def compare_recipe_to_pantry(ingredients_cell):
 
     raw_lines = normalized_raw_lines(ingredients_cell)
 
+    # If pantry is empty, just mark everything as missing
+    if not st.session_state.pantry:
+        for raw in raw_lines:
+            try:
+                qty, unit, item = parse_ingredient(raw)
+            except Exception:
+                qty, unit, item = None, None, raw.strip().lower()
+            item = singularize(item or "")
+            missing.append((item, unit, qty if qty is not None else 1))
+        return missing, [], 0
+
+
     for raw in raw_lines:
         try:
             qty, unit, item = parse_ingredient(raw)
