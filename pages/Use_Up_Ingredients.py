@@ -153,7 +153,7 @@ else:
                 st.success("Pantry updated for this recipe.")
 
         # Expand to show full ingredient list (cleaned)
-      
+
         if isinstance(ingredients_cell, list):
             for i, el in enumerate(ingredients_cell):
                 st.write(f"DEBUG list item {i} repr:", repr(el), "type:", type(el))
